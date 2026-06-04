@@ -5,277 +5,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TECA · Generador de Presupuestos</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  background: #f0ebe3;
-  font-family: 'DM Sans', sans-serif;
-  min-height: 100vh;
-  padding: 32px 20px;
-}
-
-.container {
-  max-width: 760px;
-  margin: 0 auto;
-}
-
-.page-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-.page-logo {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 32px;
-  font-weight: 300;
-  letter-spacing: 0.42em;
-  color: #2c3e2d;
-  text-transform: uppercase;
-}
-.page-logo-sub {
-  font-size: 10px;
-  letter-spacing: 0.3em;
-  color: #8a6040;
-  text-transform: uppercase;
-  margin-top: 4px;
-}
-
-.app {
-  background: #f7f2ec;
-  border: 0.5px solid #d4b896;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.tabs {
-  display: flex;
-  border-bottom: 1px solid #d4b896;
-  background: #fff9f2;
-}
-.tab {
-  padding: 12px 24px;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
-  color: #8a6040;
-  border-bottom: 2px solid transparent;
-  background: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  font-family: 'DM Sans', sans-serif;
-  transition: all 0.2s;
-}
+body { font-family: 'DM Sans', sans-serif; background: #f0ebe3; padding: 32px 20px; min-height: 100vh; }
+.container { max-width: 780px; margin: 0 auto; }
+.page-header { text-align: center; margin-bottom: 28px; }
+.page-logo { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; letter-spacing: 0.42em; color: #2c3e2d; text-transform: uppercase; }
+.page-logo-sub { font-size: 10px; letter-spacing: 0.3em; color: #8a6040; text-transform: uppercase; margin-top: 4px; }
+.app { background: #f7f2ec; border: 0.5px solid #d4b896; border-radius: 4px; overflow: hidden; }
+.tabs { display: flex; border-bottom: 1px solid #d4b896; background: #fff9f2; }
+.tab { padding: 12px 24px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; color: #8a6040; border-bottom: 2px solid transparent; background: #fff9f2; border-top: none; border-left: none; border-right: none; font-family: 'DM Sans', sans-serif; }
 .tab.active { color: #2c3e2d; border-bottom: 2px solid #2c3e2d; }
-
 .panel { display: none; padding: 32px; }
 .panel.active { display: block; }
-
-.form-section { margin-bottom: 28px; }
-.fsec-title {
-  font-size: 9px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: #8a6040;
-  margin-bottom: 14px;
-  padding-bottom: 8px;
-  border-bottom: 0.5px solid #d4b896;
-}
+.form-section { margin-bottom: 26px; }
+.fsec-title { font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: #8a6040; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 0.5px solid #d4b896; }
 .frow { display: grid; gap: 12px; margin-bottom: 12px; }
 .frow.c2 { grid-template-columns: 1fr 1fr; }
 .frow.c1 { grid-template-columns: 1fr; }
 .field { display: flex; flex-direction: column; gap: 5px; }
-.field label {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #7a5c3a;
-}
-.field input, .field select, .field textarea {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 300;
-  padding: 9px 12px;
-  border: 0.5px solid #d4b896;
-  background: #fff9f2;
-  color: #2c3e2d;
-  border-radius: 2px;
-  outline: none;
-  transition: border-color 0.2s;
-}
+.field label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7a5c3a; }
+.field input, .field select, .field textarea { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 300; padding: 9px 11px; border: 0.5px solid #d4b896; background: #fff9f2; color: #2c3e2d; border-radius: 2px; outline: none; width: 100%; }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: #2c3e2d; }
 .field textarea { resize: vertical; min-height: 80px; }
-
-.date-auto-tag {
-  font-size: 10px;
-  color: #8da88e;
-  letter-spacing: 0.06em;
-  margin-top: 4px;
-}
-
-.mod-block {
-  background: #fff9f2;
-  border: 0.5px solid #d4b896;
-  border-left: 3px solid #c17f4a;
-  border-radius: 3px;
-  padding: 18px;
-  margin-bottom: 10px;
-}
-.mod-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
-.mod-label {
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #c17f4a;
-}
-.rm-btn {
-  background: none;
-  border: none;
-  color: #8a6040;
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
-  padding: 0 4px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-.rm-btn:hover { opacity: 1; }
-
-.var-block {
-  background: #fff9f2;
-  border: 0.5px solid #d4b896;
-  border-left: 3px solid #2c3e2d;
-  border-radius: 3px;
-  padding: 18px;
-  margin-bottom: 10px;
-}
-
-.add-btn {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: #8a6040;
-  background: none;
-  border: 0.5px dashed #d4b896;
-  padding: 8px 14px;
-  cursor: pointer;
-  border-radius: 2px;
-  margin-top: 4px;
-  width: 100%;
-  font-family: 'DM Sans', sans-serif;
-  transition: background 0.2s;
-}
-.add-btn:hover { background: #f0ebe3; }
-
-.log-toggle { display: flex; gap: 10px; }
-.log-btn {
-  flex: 1;
-  padding: 9px;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  cursor: pointer;
-  border: 0.5px solid #d4b896;
-  background: #fff9f2;
-  color: #8a6040;
-  border-radius: 2px;
-  font-family: 'DM Sans', sans-serif;
-  transition: all 0.2s;
-}
-.log-btn.on { background: #f0f5f0; border-color: #8da88e; color: #2c3e2d; }
-
+.date-tag { font-size: 10px; color: #8da88e; margin-top: 4px; }
+.mod-block { background: #fff9f2; border: 0.5px solid #d4b896; border-left: 3px solid #c17f4a; border-radius: 3px; padding: 16px; margin-bottom: 10px; }
+.var-block { background: #ede0cc; border: 0.5px solid #b8936a; border-left: 3px solid #7a5030; border-radius: 3px; padding: 16px; margin-bottom: 10px; }
+.block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.mod-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: #c17f4a; }
+.var-label-form { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: #7a5030; }
+.rm-btn { background: #e8d0b0; border: none; color: #7a5030; cursor: pointer; font-size: 18px; line-height: 1; border-radius: 2px; padding: 2px 7px; font-family: 'DM Sans', sans-serif; }
 .extra-field { margin-top: 10px; display: none; }
 .extra-field.show { display: block; }
-
-.gen-btn {
-  width: 100%;
-  margin-top: 8px;
-  padding: 15px;
-  background: #2c3e2d;
-  color: #e8dfc8;
-  border: none;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: opacity 0.2s;
-}
-.gen-btn:hover { opacity: 0.88; }
-
-.print-btn {
-  width: 100%;
-  margin-top: 12px;
-  padding: 12px;
-  background: none;
-  color: #2c3e2d;
-  border: 0.5px solid #2c3e2d;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: background 0.2s;
-}
-.print-btn:hover { background: #f0ebe3; }
+.img-upload-area { border: 1.5px dashed #d4b896; border-radius: 3px; padding: 18px; text-align: center; cursor: pointer; background: #fff9f2; }
+.img-upload-area input { display: none; }
+.img-upload-label { font-size: 11px; color: #8a6040; cursor: pointer; display: block; }
+.img-preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.img-thumb { position: relative; }
+.img-thumb img { width: 100%; height: 80px; object-fit: cover; border-radius: 2px; border: 0.5px solid #d4b896; display: block; }
+.img-thumb-rm { position: absolute; top: 3px; right: 3px; background: rgba(44,62,45,0.8); color: #e8dfc8; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; padding: 0; }
 
 /* PRESUPUESTO */
-.preview-wrap { background: #f0ebe3; padding: 20px; border-radius: 3px; }
-.page { background: #f7f2ec; }
-.hero {
-  background: #2c3e2d;
-  padding: 28px 36px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-.logo-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 24px;
-  font-weight: 300;
-  letter-spacing: 0.42em;
-  color: #e8dfc8;
-  text-transform: uppercase;
-}
-.logo-sub { font-size: 8px; letter-spacing: 0.34em; color: #8da88e; text-transform: uppercase; margin-top: 3px; }
-.client-block { text-align: right; }
-.client-label { font-size: 8px; letter-spacing: 0.22em; color: #8da88e; text-transform: uppercase; margin-bottom: 4px; }
-.client-name { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400; color: #e8dfc8; }
-.client-meta { font-size: 9px; color: #6b8a6c; margin-top: 4px; line-height: 1.7; }
-.accent-bar { height: 3px; background: #c17f4a; }
-.pbody { padding: 28px 36px; }
-.sec-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.sec-lbl { font-size: 8px; letter-spacing: 0.3em; color: #8a6040; text-transform: uppercase; white-space: nowrap; }
-.sec-line { flex: 1; height: 0.5px; background: #d4b896; }
-.prod-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 300; color: #2c3e2d; margin-bottom: 22px; }
-.items-grid { display: grid; gap: 10px; margin-bottom: 20px; }
-.item-card { background: #fff9f2; border: 0.5px solid #d4b896; border-top: 2px solid #c17f4a; border-radius: 3px; padding: 16px; }
-.item-num { font-size: 8px; letter-spacing: 0.2em; color: #c17f4a; text-transform: uppercase; margin-bottom: 6px; }
-.item-name { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: #2c3e2d; margin-bottom: 2px; }
-.item-dim { font-size: 10px; color: #8a6040; margin-bottom: 10px; letter-spacing: 0.04em; }
-.sdiv { height: 0.5px; background: #d4b896; margin-bottom: 8px; }
-.spec { font-size: 10px; color: #5c4030; line-height: 1.85; display: flex; gap: 6px; }
+.preview-wrap { background: #f0ebe3; padding: 16px; border-radius: 3px; }
+.doc { background: #f7f2ec; font-family: 'DM Sans', sans-serif; }
+.hero { background: #2c3e2d; padding: 24px 32px 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+.logo-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; letter-spacing: 0.42em; color: #e8dfc8; text-transform: uppercase; }
+.logo-sub { font-size: 8px; letter-spacing: 0.3em; color: #8da88e; text-transform: uppercase; margin-top: 3px; }
+.cblock { text-align: right; }
+.clbl { font-size: 8px; letter-spacing: 0.2em; color: #8da88e; text-transform: uppercase; margin-bottom: 3px; }
+.cname { font-family: 'Cormorant Garamond', serif; font-size: 17px; color: #e8dfc8; }
+.cmeta { font-size: 9px; color: #6b8a6c; margin-top: 3px; line-height: 1.6; }
+.abar { height: 3px; background: #c17f4a; }
+.dbody { padding: 24px 32px; }
+.srow { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.slbl { font-size: 8px; letter-spacing: 0.28em; color: #8a6040; text-transform: uppercase; white-space: nowrap; }
+.sline { flex: 1; height: 0.5px; background: #d4b896; }
+.ptitle { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; color: #2c3e2d; margin-bottom: 16px; }
+.igrid { display: grid; gap: 10px; margin-bottom: 18px; }
+.icard { background: #fff9f2; border: 0.5px solid #d4b896; border-top: 2px solid #c17f4a; border-radius: 3px; padding: 14px; }
+.inum { font-size: 8px; letter-spacing: 0.18em; color: #c17f4a; text-transform: uppercase; margin-bottom: 5px; }
+.iname { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: #2c3e2d; margin-bottom: 2px; }
+.idim { font-size: 10px; color: #8a6040; margin-bottom: 8px; }
+.sdivl { height: 0.5px; background: #d4b896; margin-bottom: 7px; }
+.spc { font-size: 10px; color: #5c4030; line-height: 1.8; display: flex; gap: 5px; }
 .sdot { color: #c17f4a; flex-shrink: 0; }
-.var-card { background: #fff9f2; border: 0.5px solid #d4b896; border-radius: 3px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 8px; }
-.var-card.feat { background: #2c3e2d; border-color: #2c3e2d; }
-.var-tag-p { font-size: 8px; letter-spacing: 0.2em; color: #8a6040; text-transform: uppercase; background: #e8d8c0; display: inline-block; padding: 2px 7px; border-radius: 2px; margin-bottom: 6px; }
-.var-card.feat .var-tag-p { background: #4a6b4b; color: #c6d9c7; }
-.var-name-p { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: #2c3e2d; margin-bottom: 3px; }
-.var-card.feat .var-name-p { color: #e8dfc8; }
-.var-spec-p { font-size: 10px; color: #7a5c3a; line-height: 1.5; }
-.var-card.feat .var-spec-p { color: #8da88e; }
-.var-price-lbl { font-size: 8px; letter-spacing: 0.15em; color: #8a6040; text-transform: uppercase; text-align: right; white-space: nowrap; }
-.var-card.feat .var-price-lbl { color: #6b8a6c; }
-.var-price-val { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: #2c3e2d; text-align: right; }
-.var-card.feat .var-price-val { color: #e8dfc8; }
-.log-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
-.lcard { border-radius: 3px; padding: 12px 14px; }
+.vcard { background: #ede0cc; border: 0.5px solid #b8936a; border-left: 3px solid #7a5030; border-radius: 3px; padding: 13px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 8px; }
+.vcard.feat { background: #7a5030; border-color: #7a5030; }
+.vtag { font-size: 8px; letter-spacing: 0.18em; color: #5c3a18; text-transform: uppercase; background: #d4b896; display: inline-block; padding: 2px 6px; border-radius: 2px; margin-bottom: 5px; }
+.vcard.feat .vtag { background: #5c3a18; color: #f5ead8; }
+.vname { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #3d2510; margin-bottom: 5px; }
+.vcard.feat .vname { color: #f5ead8; }
+.vdesc { font-size: 10px; color: #6b4020; line-height: 1.7; white-space: pre-wrap; }
+.vcard.feat .vdesc { color: #e8d0b0; }
+.vprice-lbl { font-size: 8px; letter-spacing: 0.13em; color: #6b4020; text-transform: uppercase; text-align: right; white-space: nowrap; }
+.vcard.feat .vprice-lbl { color: #e8d0b0; }
+.vprice { font-family: 'Cormorant Garamond', serif; font-size: 21px; color: #3d2510; text-align: right; white-space: nowrap; }
+.vcard.feat .vprice { color: #f5ead8; }
+.lrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lcard { border-radius: 3px; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; }
 .lcard.inc { background: #f0f5f0; border: 0.5px solid #8da88e; }
 .lcard.sep { background: #fdf6ee; border: 0.5px solid #d4b896; }
 .ltitle { font-size: 10px; font-weight: 500; margin-bottom: 2px; }
@@ -284,40 +93,29 @@ body {
 .ldesc { font-size: 9px; line-height: 1.6; }
 .lcard.inc .ldesc { color: #4a6b4b; }
 .lcard.sep .ldesc { color: #7a5c3a; }
-.lval { font-family: 'Cormorant Garamond', serif; font-size: 13px; color: #8a6040; margin-top: 4px; }
-.bottom { background: #2c3e2d; padding: 24px 36px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
-.tot-lbl { font-size: 8px; letter-spacing: 0.26em; color: #8da88e; text-transform: uppercase; margin-bottom: 4px; }
-.tot-val { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 300; color: #e8dfc8; }
-.tot-note { font-size: 9px; color: #5a7a5b; margin-top: 4px; letter-spacing: 0.04em; line-height: 1.6; max-width: 260px; }
-.val-lbl { font-size: 8px; letter-spacing: 0.2em; color: #8da88e; text-transform: uppercase; margin-bottom: 4px; text-align: right; }
-.val-txt { font-size: 11px; color: #c6d9c7; line-height: 1.7; text-align: right; }
-
-.empty-state { text-align: center; padding: 60px 20px; color: #8a6040; font-size: 13px; }
-.empty-big { font-family: 'Cormorant Garamond', serif; font-size: 36px; color: #d4b896; margin-bottom: 8px; letter-spacing: 0.2em; }
-
-@media print {
-  body { background: white; padding: 0; }
-  .container { max-width: 100%; }
-  .page-header, .tabs, .panel#tab-form, .print-btn { display: none !important; }
-  .panel#tab-preview { display: block !important; padding: 0; }
-  .preview-wrap { padding: 0; background: white; }
-  .app { border: none; }
-}
+.lval { font-family: 'Cormorant Garamond', serif; font-size: 12px; color: #8a6040; margin-top: 3px; }
+.bot { background: #2c3e2d; padding: 22px 32px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
+.tlbl { font-size: 8px; letter-spacing: 0.24em; color: #8da88e; text-transform: uppercase; margin-bottom: 3px; }
+.tval { font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 300; color: #e8dfc8; }
+.tnote { font-size: 9px; color: #5a7a5b; margin-top: 3px; line-height: 1.6; max-width: 240px; }
+.vlbl { font-size: 8px; letter-spacing: 0.18em; color: #8da88e; text-transform: uppercase; margin-bottom: 3px; text-align: right; }
+.vtxt { font-size: 11px; color: #c6d9c7; line-height: 1.7; text-align: right; }
+.empty-state { text-align: center; padding: 50px 20px; color: #8a6040; }
+.empty-big { font-family: 'Cormorant Garamond', serif; font-size: 30px; color: #d4b896; margin-bottom: 8px; }
 
 @media (max-width: 600px) {
+  body { padding: 16px 12px; }
   .frow.c2 { grid-template-columns: 1fr; }
   .panel { padding: 20px; }
-  .hero { padding: 20px 20px 16px; flex-direction: column; gap: 16px; }
-  .client-block { text-align: left; }
-  .pbody { padding: 20px; }
-  .bottom { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .val-lbl, .val-txt { text-align: left; }
-  .log-row { grid-template-columns: 1fr; }
+  .hero { flex-direction: column; gap: 14px; padding: 18px 20px; }
+  .cblock { text-align: left; }
+  .dbody { padding: 18px 20px; }
+  .bot { flex-direction: column; align-items: flex-start; padding: 18px 20px; }
+  .lrow { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
-
 <div class="container">
   <div class="page-header">
     <div class="page-logo">TECA</div>
@@ -337,29 +135,19 @@ body {
         <div class="frow c2">
           <div class="field">
             <label>Nombre del cliente</label>
-            <input type="text" id="clientName" placeholder="Ej: Luciana Conti">
+            <input type="text" id="clientName" placeholder="Ej: Luciana Conti" oninput="autoCapFirst(this)">
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-            <div class="field">
-              <label>Día</label>
-              <input type="number" id="clientDay" min="1" max="31">
-            </div>
-            <div class="field">
-              <label>Mes</label>
+            <div class="field"><label>Día</label><input type="number" id="clientDay" min="1" max="31"></div>
+            <div class="field"><label>Mes</label>
               <select id="clientMonth">
-                <option>Enero</option><option>Febrero</option><option>Marzo</option>
-                <option>Abril</option><option>Mayo</option><option>Junio</option>
-                <option>Julio</option><option>Agosto</option><option>Septiembre</option>
-                <option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
+                <option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
               </select>
             </div>
-            <div class="field">
-              <label>Año</label>
-              <input type="text" id="clientYear">
-            </div>
+            <div class="field"><label>Año</label><input type="text" id="clientYear"></div>
           </div>
         </div>
-        <div class="date-auto-tag">📅 Fecha de hoy cargada automáticamente — podés editarla si necesitás</div>
+        <div class="date-tag">📅 Fecha de hoy cargada automáticamente — podés editarla si necesitás</div>
       </div>
 
       <div class="form-section">
@@ -367,7 +155,7 @@ body {
         <div class="frow c1">
           <div class="field">
             <label>Nombre del proyecto</label>
-            <input type="text" id="projectName" placeholder="Ej: Ropero a medida">
+            <input type="text" id="projectName" placeholder="Ej: Ropero a medida" oninput="autoCapFirst(this)">
           </div>
         </div>
       </div>
@@ -375,13 +163,23 @@ body {
       <div class="form-section">
         <div class="fsec-title">Módulos / Ítems</div>
         <div id="modules-list"></div>
-        <button class="add-btn" onclick="addModule()">+ Agregar módulo</button>
+        <button onclick="addModule()" style="display:block;width:100%;margin-top:6px;padding:11px 14px;background:#c17f4a;color:#fff9f2;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.12em;cursor:pointer;">+ Agregar módulo</button>
       </div>
 
       <div class="form-section">
         <div class="fsec-title">Variantes de precio</div>
         <div id="variants-list"></div>
-        <button class="add-btn" onclick="addVariant()">+ Agregar variante</button>
+        <button onclick="addVariant()" style="display:block;width:100%;margin-top:6px;padding:11px 14px;background:#7a5030;color:#fff9f2;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.12em;cursor:pointer;">+ Agregar variante</button>
+      </div>
+
+      <div class="form-section">
+        <div class="fsec-title">Imágenes del proyecto</div>
+        <div class="img-upload-area" onclick="document.getElementById('imgInput').click()">
+          <div style="font-size:24px;margin-bottom:6px;">🖼</div>
+          <label class="img-upload-label">Tocá para adjuntar fotos o renders<br><span style="font-size:10px;opacity:0.7;">Aparecerán al inicio del presupuesto</span></label>
+          <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImages(this)">
+        </div>
+        <div class="img-preview-grid" id="imgPreviewGrid"></div>
       </div>
 
       <div class="form-section">
@@ -389,34 +187,28 @@ body {
         <div class="frow c2">
           <div class="field">
             <label>Envío</label>
-            <div class="log-toggle">
-              <button class="log-btn on" id="btn-envio-inc" onclick="toggleLog('envio','inc')">Incluido</button>
-              <button class="log-btn" id="btn-envio-sep" onclick="toggleLog('envio','sep')">Aparte</button>
+            <div style="display:flex;gap:10px;margin-top:2px;">
+              <button id="btn-envio-inc" onclick="toggleLog('envio','inc')" style="flex:1;padding:9px;font-size:11px;cursor:pointer;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;background:#2c3e2d;color:#e8dfc8;">Incluido</button>
+              <button id="btn-envio-sep" onclick="toggleLog('envio','sep')" style="flex:1;padding:9px;font-size:11px;cursor:pointer;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;background:#d4b896;color:#5c4030;">Aparte</button>
             </div>
             <div class="extra-field" id="extra-envio">
-              <div class="field">
-                <label>Valor aproximado ($)</label>
-                <input type="text" id="envio-val" placeholder="Ej: 15.000" oninput="fmtInput(this)">
-              </div>
+              <div class="field" style="margin-top:8px;"><label>Valor aproximado ($)</label><input type="text" id="envio-val" placeholder="Ej: 15.000" oninput="fmtInput(this)"></div>
             </div>
           </div>
           <div class="field">
             <label>Instalación</label>
-            <div class="log-toggle">
-              <button class="log-btn" id="btn-inst-inc" onclick="toggleLog('inst','inc')">Incluida</button>
-              <button class="log-btn on" id="btn-inst-sep" onclick="toggleLog('inst','sep')">Aparte</button>
+            <div style="display:flex;gap:10px;margin-top:2px;">
+              <button id="btn-inst-inc" onclick="toggleLog('inst','inc')" style="flex:1;padding:9px;font-size:11px;cursor:pointer;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;background:#d4b896;color:#5c4030;">Incluida</button>
+              <button id="btn-inst-sep" onclick="toggleLog('inst','sep')" style="flex:1;padding:9px;font-size:11px;cursor:pointer;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;background:#2c3e2d;color:#e8dfc8;">Aparte</button>
             </div>
             <div class="extra-field show" id="extra-inst">
-              <div class="field">
-                <label>Valor aproximado ($)</label>
-                <input type="text" id="inst-val" placeholder="Ej: 30.000" oninput="fmtInput(this)">
-              </div>
+              <div class="field" style="margin-top:8px;"><label>Valor aproximado ($)</label><input type="text" id="inst-val" placeholder="Ej: 30.000" oninput="fmtInput(this)"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <button class="gen-btn" onclick="generate()">Generar presupuesto →</button>
+      <button onclick="generate()" style="display:block;width:100%;margin-top:4px;padding:14px;background:#2c3e2d;color:#e8dfc8;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.26em;text-transform:uppercase;cursor:pointer;">Generar presupuesto →</button>
     </div>
 
     <div id="tab-preview" class="panel">
@@ -426,68 +218,89 @@ body {
           <p>Completá el formulario y generá el presupuesto</p>
         </div>
       </div>
-      <button class="print-btn" onclick="window.print()">Imprimir / Guardar como PDF</button>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button onclick="showTab('form')" style="flex:1;padding:12px;background:#c17f4a;color:#fff9f2;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;">← Modificar</button>
+        <button onclick="descargarPDF()" id="btn-pdf" style="flex:1;padding:12px;background:#2c3e2d;color:#e8dfc8;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;">Descargar PDF</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 let logState = { envio: 'inc', inst: 'sep' };
-let modCount = 0;
-let varCount = 0;
+let modCount = 0, varCount = 0;
 const letters = ['A','B','C','D','E','F'];
+const VARIANTES_DEFAULT = ['Línea Esencial', 'Línea Autor'];
+let imageDataURLs = [];
 
 function setTodayDate() {
-  const hoy = new Date();
-  document.getElementById('clientDay').value = hoy.getDate();
-  document.getElementById('clientMonth').selectedIndex = hoy.getMonth();
-  document.getElementById('clientYear').value = hoy.getFullYear();
+  const h = new Date();
+  document.getElementById('clientDay').value = h.getDate();
+  document.getElementById('clientMonth').selectedIndex = h.getMonth();
+  document.getElementById('clientYear').value = h.getFullYear();
 }
-
-function formatNum(val) {
-  const digits = val.replace(/\D/g, '');
-  if (!digits) return '';
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+function capFirst(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+function autoCapFirst(el) {
+  const p = el.selectionStart;
+  el.value = capFirst(el.value);
+  try { el.setSelectionRange(p,p); } catch(e){}
 }
-
-function fmtInput(el) {
-  el.value = formatNum(el.value);
+function formatNum(v) {
+  const d = v.replace(/\D/g,'');
+  return d ? d.replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '';
 }
+function fmtInput(el) { el.value = formatNum(el.value); }
 
 function showTab(t) {
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + t).classList.add('active');
-  document.getElementById('tab-btn-' + t).classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('tab-btn-'+t).classList.add('active');
 }
 
 function toggleLog(type, val) {
   logState[type] = val;
-  ['inc','sep'].forEach(v => {
-    document.getElementById('btn-' + type + '-' + v).classList.toggle('on', v === val);
-  });
-  const extra = document.getElementById('extra-' + type);
-  if (extra) extra.classList.toggle('show', val === 'sep');
+  const inc = document.getElementById('btn-'+type+'-inc');
+  const sep = document.getElementById('btn-'+type+'-sep');
+  if (val === 'inc') {
+    inc.style.background = '#2c3e2d'; inc.style.color = '#e8dfc8';
+    sep.style.background = '#d4b896'; sep.style.color = '#5c4030';
+  } else {
+    sep.style.background = '#2c3e2d'; sep.style.color = '#e8dfc8';
+    inc.style.background = '#d4b896'; inc.style.color = '#5c4030';
+  }
+  document.getElementById('extra-'+type).classList.toggle('show', val==='sep');
 }
+
+function handleImages(input) {
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => { imageDataURLs.push(e.target.result); renderImgPreviews(); };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+function renderImgPreviews() {
+  document.getElementById('imgPreviewGrid').innerHTML = imageDataURLs.map((src,i) => `
+    <div class="img-thumb">
+      <img src="${src}">
+      <button class="img-thumb-rm" onclick="removeImg(${i})">×</button>
+    </div>`).join('');
+}
+function removeImg(i) { imageDataURLs.splice(i,1); renderImgPreviews(); }
 
 function addModule() {
   modCount++;
-  const id = 'mod' + modCount;
-  const n = modCount;
+  const id = 'mod'+modCount, n = modCount;
   const div = document.createElement('div');
-  div.id = id;
-  div.className = 'mod-block';
+  div.id = id; div.className = 'mod-block';
   div.innerHTML = `
-    <div class="mod-header">
+    <div class="block-header">
       <span class="mod-label">Módulo 0${n}</span>
       <button class="rm-btn" onclick="document.getElementById('${id}').remove()">×</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-      <div class="field">
-        <label>Nombre del módulo</label>
-        <input type="text" data-key="name" placeholder="Ej: Cuerpo principal">
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="field"><label>Nombre</label><input type="text" data-key="name" placeholder="Ej: Cuerpo principal" oninput="autoCapFirst(this)"></div>
       <div class="field">
         <label>Medidas — Ancho · Alto · Prof. (cm)</label>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
@@ -497,161 +310,171 @@ function addModule() {
         </div>
       </div>
     </div>
-    <div class="field">
-      <label>Especificaciones (una por línea)</label>
-      <textarea data-key="specs" placeholder="MDF blanco 18mm&#10;4 cajones telescópicos&#10;Bisagra cierre suave"></textarea>
-    </div>`;
+    <div class="field"><label>Especificaciones (una por línea)</label><textarea data-key="specs" placeholder="MDF blanco 18mm&#10;4 cajones telescópicos&#10;Bisagra cierre suave"></textarea></div>`;
   document.getElementById('modules-list').appendChild(div);
 }
 
 function addVariant() {
   varCount++;
-  const id = 'var' + varCount;
-  const n = varCount;
+  const id = 'var'+varCount, n = varCount;
+  const defName = VARIANTES_DEFAULT[n-1] || '';
   const div = document.createElement('div');
-  div.id = id;
-  div.className = 'var-block';
+  div.id = id; div.className = 'var-block';
   div.innerHTML = `
-    <div class="mod-header">
-      <span class="mod-label">Opción ${letters[n-1] || n}</span>
+    <div class="block-header">
+      <span class="var-label-form">Opción ${letters[n-1]||n}</span>
       <button class="rm-btn" onclick="document.getElementById('${id}').remove()">×</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <div class="field">
-        <label>Nombre de la variante</label>
-        <input type="text" data-key="name" placeholder="Ej: Línea Blanca">
-      </div>
-      <div class="field">
-        <label>Precio ($)</label>
-        <input type="text" data-key="price" placeholder="1.210.000" oninput="fmtInput(this)">
-      </div>
+      <div class="field"><label>Nombre</label><input type="text" data-key="name" value="${defName}" oninput="autoCapFirst(this)"></div>
+      <div class="field"><label>Precio ($)</label><input type="text" data-key="price" placeholder="1.210.000" oninput="fmtInput(this)"></div>
     </div>
-    <div class="field" style="margin-bottom:10px;">
-      <label>Descripción breve</label>
-      <input type="text" data-key="desc" placeholder="Ej: Puertas blancas lacadas · interior MDF blanco">
-    </div>
+    <div class="field" style="margin-bottom:10px;"><label>Descripción</label><textarea data-key="desc" placeholder="Estructura en MDF blanco 18mm&#10;Puertas lacadas blancas"></textarea></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <input type="checkbox" id="feat${n}" data-key="featured" style="width:auto;cursor:pointer;">
-      <label for="feat${n}" style="font-size:10px;color:#2c3e2d;cursor:pointer;">Destacar esta variante (fondo verde oscuro)</label>
+      <label for="feat${n}" style="font-size:10px;color:#3d2510;cursor:pointer;">Destacar esta variante (fondo oscuro)</label>
     </div>`;
   document.getElementById('variants-list').appendChild(div);
 }
 
+const svgTruck = `<svg width="26" height="20" viewBox="0 0 28 22" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="5" width="17" height="12" rx="1.5" stroke="#4a6b4b" stroke-width="1.2" fill="none"/><path d="M18 9h5.5l2.5 4v4H18V9z" stroke="#8a6040" stroke-width="1.2" fill="none" stroke-linejoin="round"/><circle cx="6" cy="18" r="2" stroke="#4a6b4b" stroke-width="1.2" fill="none"/><circle cx="21" cy="18" r="2" stroke="#8a6040" stroke-width="1.2" fill="none"/><line x1="1" y1="8" x2="18" y2="8" stroke="#4a6b4b" stroke-width="0.8" stroke-dasharray="2 1.5"/></svg>`;
+const svgTool = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 3.5c-2.2-.4-4.5.8-5.3 3-.6 1.6-.2 3.3.8 4.5L3 18a1.5 1.5 0 002.1 2.1l7-7c1.2 1 2.9 1.4 4.5.8 2.2-.8 3.4-3.1 3-5.3l-2.5 2.5-1.5-.5-.5-1.5 2.5-2.5z" stroke="#8a6040" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`;
+
 function getModules() {
-  return Array.from(document.querySelectorAll('#modules-list .mod-block')).map((el, i) => {
-    const name = el.querySelector('[data-key="name"]').value;
+  return Array.from(document.querySelectorAll('#modules-list .mod-block')).map((el,i)=>{
+    const name = capFirst(el.querySelector('[data-key="name"]').value);
     const w = el.querySelector('[data-key="w"]').value;
     const h = el.querySelector('[data-key="h"]').value;
     const d = el.querySelector('[data-key="d"]').value;
     const dim = [w,h,d].filter(Boolean).join(' × ');
-    const specs = el.querySelector('textarea').value.split('\n').filter(s => s.trim());
-    return { num: i+1, name, dim, specs };
-  }).filter(m => m.name);
+    const specs = el.querySelector('textarea').value.split('\n').filter(s=>s.trim());
+    return { num:i+1, name, dim, specs };
+  }).filter(m=>m.name);
 }
-
 function getVariants() {
-  return Array.from(document.querySelectorAll('#variants-list .var-block')).map((el, i) => {
-    const name = el.querySelector('[data-key="name"]').value;
+  return Array.from(document.querySelectorAll('#variants-list .var-block')).map((el,i)=>{
+    const name = capFirst(el.querySelector('[data-key="name"]').value);
     const price = el.querySelector('[data-key="price"]').value;
     const desc = el.querySelector('[data-key="desc"]').value;
     const featured = el.querySelector('[data-key="featured"]').checked;
     return { i, name, price, desc, featured };
-  }).filter(v => v.name);
+  }).filter(v=>v.name);
+}
+
+function buildDoc(client, fullDate, project, mods, vars, envioInc, instInc, envioVal, instVal, lowest) {
+  const colCount = mods.length===1?1:mods.length===2?2:3;
+  const galleryHTML = imageDataURLs.length ? `
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(imageDataURLs.length,2)},1fr);gap:8px;margin-bottom:20px;">
+      ${imageDataURLs.map(src=>`<img src="${src}" style="width:100%;max-height:220px;object-fit:cover;border-radius:3px;border:0.5px solid #d4b896;display:block;">`).join('')}
+    </div>` : '';
+  const modsHTML = mods.map(m=>`
+    <div class="icard">
+      <div class="inum">0${m.num} · ${m.name}</div>
+      <div class="iname">${m.name}</div>
+      ${m.dim?`<div class="idim">${m.dim} cm</div>`:''}
+      <div class="sdivl"></div>
+      ${m.specs.map(s=>`<div class="spc"><span class="sdot">·</span>${capFirst(s)}</div>`).join('')}
+    </div>`).join('');
+  const varsHTML = vars.map((v,i)=>`
+    <div class="vcard ${v.featured?'feat':''}">
+      <div style="flex:1;">
+        <div class="vtag">Opción ${letters[i]||i+1}</div>
+        <div class="vname">${v.name}</div>
+        ${v.desc?`<div class="vdesc">${v.desc}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div class="vprice-lbl">Valor final</div>
+        <div class="vprice">$ ${v.price}</div>
+      </div>
+    </div>`).join('');
+  return `<div class="preview-wrap"><div class="doc">
+    <div class="hero">
+      <div><div class="logo-name">T E C A</div><div class="logo-sub">— Carpintería de Diseño —</div></div>
+      <div class="cblock"><div class="clbl">Preparado para</div><div class="cname">${client}</div><div class="cmeta">${fullDate}</div></div>
+    </div>
+    <div class="abar"></div>
+    <div class="dbody">
+      <div class="srow"><span class="slbl">Propuesta · Mobiliario</span><div class="sline"></div></div>
+      <div class="ptitle">${project}</div>
+      ${galleryHTML}
+      ${mods.length?`<div class="srow"><span class="slbl">Especificaciones</span><div class="sline"></div></div><div class="igrid" style="grid-template-columns:repeat(${colCount},1fr);">${modsHTML}</div>`:''}
+      ${vars.length?`<div class="srow"><span class="slbl">Variantes · Precio</span><div class="sline"></div></div><div style="margin-bottom:18px;">${varsHTML}</div>`:''}
+      <div class="srow"><span class="slbl">Logística</span><div class="sline"></div></div>
+      <div class="lrow">
+        <div class="lcard ${envioInc?'inc':'sep'}">
+          <div style="flex-shrink:0;margin-top:1px;">${svgTruck}</div>
+          <div>
+            <div class="ltitle">Envío ${envioInc?'incluido':'aparte'}</div>
+            <div class="ldesc">${envioInc?'El traslado hasta el domicilio está incluido en el precio del proyecto.':'El traslado se presupuesta por separado.'}</div>
+            ${!envioInc&&envioVal?`<div class="lval">Valor aprox. $ ${envioVal}</div>`:''}
+          </div>
+        </div>
+        <div class="lcard ${instInc?'inc':'sep'}">
+          <div style="flex-shrink:0;margin-top:1px;">${svgTool}</div>
+          <div>
+            <div class="ltitle">Instalación ${instInc?'incluida':'aparte'}</div>
+            <div class="ldesc">${instInc?'La colocación está incluida en el precio del proyecto.':'La colocación se presupuesta por separado según las condiciones del lugar.'}</div>
+            ${!instInc&&instVal?`<div class="lval">Valor aprox. $ ${instVal}</div>`:''}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bot">
+      <div>
+        <div class="tlbl">${vars.length>1?'Valor desde':'Valor del proyecto'}</div>
+        <div class="tval">$ ${lowest||'—'}</div>
+        <div class="tnote">Precio Final<br>Valor sujeto a modificaciones según el replanteo en obra.</div>
+      </div>
+      <div>
+        <div class="vlbl">Validez del presupuesto</div>
+        <div class="vtxt">10 días hábiles<br>desde el ${fullDate}</div>
+      </div>
+    </div>
+  </div></div>`;
 }
 
 function generate() {
-  const client = document.getElementById('clientName').value || 'Cliente';
+  const client = capFirst(document.getElementById('clientName').value||'Cliente');
   const day = document.getElementById('clientDay').value;
   const month = document.getElementById('clientMonth').value;
   const year = document.getElementById('clientYear').value;
   const fullDate = `${day} de ${month} de ${year}`;
-  const project = document.getElementById('projectName').value || 'Proyecto a medida';
+  const project = capFirst(document.getElementById('projectName').value||'Proyecto a medida');
   const mods = getModules();
   const vars = getVariants();
-  const envioInc = logState.envio === 'inc';
-  const instInc = logState.inst === 'inc';
+  const envioInc = logState.envio==='inc';
+  const instInc = logState.inst==='inc';
   const envioVal = document.getElementById('envio-val').value;
   const instVal = document.getElementById('inst-val').value;
-  const colCount = mods.length === 1 ? 1 : mods.length === 2 ? 2 : 3;
-
-  const modsHTML = mods.map(m => `
-    <div class="item-card">
-      <div class="item-num">0${m.num} · ${m.name}</div>
-      <div class="item-name">${m.name}</div>
-      ${m.dim ? `<div class="item-dim">${m.dim} cm</div>` : ''}
-      <div class="sdiv"></div>
-      ${m.specs.map(s => `<div class="spec"><span class="sdot">·</span>${s}</div>`).join('')}
-    </div>`).join('');
-
-  const lowestPrice = vars.length ? vars.reduce((a,b) => {
-    const pa = parseInt((a.price||'0').replace(/\./g,'')) || 0;
-    const pb = parseInt((b.price||'0').replace(/\./g,'')) || 0;
-    return pa <= pb ? a : b;
+  const lowest = vars.length ? vars.reduce((a,b)=>{
+    const pa=parseInt((a.price||'0').replace(/\./g,''))||0;
+    const pb=parseInt((b.price||'0').replace(/\./g,''))||0;
+    return pa<=pb?a:b;
   }).price : '';
-
-  const varsHTML = vars.map((v,i) => `
-    <div class="var-card ${v.featured ? 'feat' : ''}">
-      <div>
-        <div class="var-tag-p">Opción ${letters[i] || i+1}</div>
-        <div class="var-name-p">${v.name}</div>
-        ${v.desc ? `<div class="var-spec-p">${v.desc}</div>` : ''}
-      </div>
-      <div>
-        <div class="var-price-lbl">Valor final</div>
-        <div class="var-price-val">$ ${v.price}</div>
-      </div>
-    </div>`).join('');
-
-  document.getElementById('preview-content').innerHTML = `
-    <div class="preview-wrap"><div class="page">
-      <div class="hero">
-        <div>
-          <div class="logo-name">T E C A</div>
-          <div class="logo-sub">— Carpintería de Diseño —</div>
-        </div>
-        <div class="client-block">
-          <div class="client-label">Preparado para</div>
-          <div class="client-name">${client}</div>
-          <div class="client-meta">${fullDate}</div>
-        </div>
-      </div>
-      <div class="accent-bar"></div>
-      <div class="pbody">
-        <div class="sec-row"><span class="sec-lbl">Propuesta · Mobiliario</span><div class="sec-line"></div></div>
-        <div class="prod-title">${project}</div>
-        ${mods.length ? `
-          <div class="sec-row"><span class="sec-lbl">Especificaciones</span><div class="sec-line"></div></div>
-          <div class="items-grid" style="grid-template-columns:repeat(${colCount},1fr);">${modsHTML}</div>` : ''}
-        ${vars.length ? `
-          <div class="sec-row"><span class="sec-lbl">Variantes · Precio</span><div class="sec-line"></div></div>
-          <div style="margin-bottom:20px;">${varsHTML}</div>` : ''}
-        <div class="sec-row"><span class="sec-lbl">Logística</span><div class="sec-line"></div></div>
-        <div class="log-row">
-          <div class="lcard ${envioInc ? 'inc' : 'sep'}">
-            <div class="ltitle">Envío ${envioInc ? 'incluido' : 'aparte'}</div>
-            <div class="ldesc">${envioInc ? 'El traslado hasta el domicilio está incluido en el precio del proyecto.' : 'El traslado se presupuesta por separado.'}</div>
-            ${!envioInc && envioVal ? `<div class="lval">Valor aprox. $ ${envioVal}</div>` : ''}
-          </div>
-          <div class="lcard ${instInc ? 'inc' : 'sep'}">
-            <div class="ltitle">Instalación ${instInc ? 'incluida' : 'aparte'}</div>
-            <div class="ldesc">${instInc ? 'La colocación está incluida en el precio del proyecto.' : 'La colocación se presupuesta por separado según las condiciones del lugar.'}</div>
-            ${!instInc && instVal ? `<div class="lval">Valor aprox. $ ${instVal}</div>` : ''}
-          </div>
-        </div>
-      </div>
-      <div class="bottom">
-        <div>
-          <div class="tot-lbl">${vars.length > 1 ? 'Valor desde' : 'Valor del proyecto'}</div>
-          <div class="tot-val">$ ${lowestPrice || '—'}</div>
-          <div class="tot-note">Precio Final<br>Valor sujeto a modificaciones según el replanteo en obra.</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div class="val-lbl">Validez del presupuesto</div>
-          <div class="val-txt">10 días hábiles<br>desde el ${fullDate}</div>
-        </div>
-      </div>
-    </div></div>`;
+  document.getElementById('preview-content').innerHTML = buildDoc(client,fullDate,project,mods,vars,envioInc,instInc,envioVal,instVal,lowest);
   showTab('preview');
+}
+
+async function descargarPDF() {
+  const btn = document.getElementById('btn-pdf');
+  btn.textContent = 'Generando...';
+  btn.style.opacity = '0.7';
+  const el = document.getElementById('preview-content');
+  try {
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#f0ebe3' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = (canvas.height * pdfW) / canvas.width;
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH);
+    const clientName = document.getElementById('clientName').value || 'presupuesto';
+    pdf.save(`TECA_${clientName.replace(/\s+/g,'_')}.pdf`);
+  } catch(e) {
+    alert('Error al generar el PDF. Intentá de nuevo.');
+  }
+  btn.textContent = 'Descargar PDF';
+  btn.style.opacity = '1';
 }
 
 setTodayDate();
