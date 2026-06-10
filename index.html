@@ -45,6 +45,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f0ebe3; padding: 32px 20
 .img-thumb { position: relative; }
 .img-thumb img { width: 100%; height: 80px; object-fit: cover; border-radius: 2px; border: 0.5px solid #d4b896; display: block; }
 .img-thumb-rm { position: absolute; top: 3px; right: 3px; background: rgba(44,62,45,0.8); color: #e8dfc8; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; padding: 0; }
+
+/* PRESUPUESTO */
 .preview-wrap { background: #f0ebe3; padding: 16px; border-radius: 3px; }
 .doc { background: #f7f2ec; }
 .hero { background: #2c3e2d; padding: 24px 32px 20px; display: flex; justify-content: space-between; align-items: flex-start; }
@@ -99,6 +101,28 @@ body { font-family: 'DM Sans', sans-serif; background: #f0ebe3; padding: 32px 20
 .vtxt { font-size: 11px; color: #c6d9c7; line-height: 1.7; text-align: right; }
 .empty-state { text-align: center; padding: 50px 20px; color: #8a6040; }
 .empty-big { font-family: 'Cormorant Garamond', serif; font-size: 30px; color: #d4b896; margin-bottom: 8px; }
+
+/* Salto de página para PDF */
+.page-break {
+  width: 100%;
+  height: 0;
+  page-break-before: always;
+  break-before: page;
+}
+/* Separador visual entre páginas en la vista previa */
+.page-break-visual {
+  width: 100%;
+  height: 32px;
+  background: #e0d5c5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: #8a6040;
+  text-transform: uppercase;
+}
+
 @media (max-width: 600px) {
   body { padding: 16px 12px; }
   .frow.c2 { grid-template-columns: 1fr; }
@@ -327,24 +351,65 @@ function getVariants() {
   }).filter(v=>v.name);
 }
 
-function buildDoc(client,fullDate,project,mods,vars,envioInc,instInc,envioVal,instVal,lowest) {
-  const colCount=mods.length===1?1:mods.length===2?2:3;
-  const galleryHTML=imageDataURLs.length?`
+function buildDoc(client, fullDate, project, mods, vars, envioInc, instInc, envioVal, instVal, lowest) {
+  const colCount = mods.length===1?1:mods.length===2?2:3;
+  const muchosMods = mods.length > 3;
+
+  const galleryHTML = imageDataURLs.length ? `
     <div style="display:grid;grid-template-columns:repeat(${Math.min(imageDataURLs.length,2)},1fr);gap:8px;margin-bottom:20px;">
       ${imageDataURLs.map(src=>`<img src="${src}" style="width:100%;max-height:220px;object-fit:cover;border-radius:3px;border:0.5px solid #d4b896;display:block;">`).join('')}
-    </div>`:'';
-  const modsHTML=mods.map(m=>`
+    </div>` : '';
+
+  const modsHTML = mods.map(m=>`
     <div class="icard">
       <div class="inum">0${m.num} · ${m.name}</div><div class="iname">${m.name}</div>
       ${m.dim?`<div class="idim">${m.dim} cm</div>`:''}
       <div class="sdivl"></div>
       ${m.specs.map(s=>`<div class="spc"><span class="sdot">·</span>${capFirst(s)}</div>`).join('')}
     </div>`).join('');
-  const varsHTML=vars.map((v,i)=>`
+
+  const varsHTML = vars.map((v,i)=>`
     <div class="vcard ${v.featured?'feat':''}">
       <div style="flex:1;"><div class="vtag">Opción ${letters[i]||i+1}</div><div class="vname">${v.name}</div>${v.desc?`<div class="vdesc">${v.desc}</div>`:''}</div>
       <div style="text-align:right;flex-shrink:0;"><div class="vprice-lbl">Valor final</div><div class="vprice">$ ${v.price}</div></div>
     </div>`).join('');
+
+  // Bloque de variantes + logística + footer
+  // Si hay más de 3 módulos, se inicia en página nueva
+  const p2header = muchosMods ? `
+    <div class="hero" style="margin-top:0;">
+      <div><div class="logo-name">T E C A</div><div class="logo-sub">— Carpintería de Diseño —</div></div>
+      <div class="cblock"><div class="clbl">Preparado para</div><div class="cname">${client}</div><div class="cmeta">${fullDate}</div></div>
+    </div>
+    <div class="abar"></div>
+    <div class="dbody">` : '';
+
+  const p2close = muchosMods ? `</div>` : '';
+
+  const varSection = vars.length ? `
+    <div class="srow"><span class="slbl">Variantes · Precio</span><div class="sline"></div></div>
+    <div style="margin-bottom:18px;">${varsHTML}</div>` : '';
+
+  const logSection = `
+    <div class="srow"><span class="slbl">Logística</span><div class="sline"></div></div>
+    <div class="lrow">
+      <div class="lcard ${envioInc?'inc':'sep'}"><div style="flex-shrink:0;margin-top:1px;">${svgTruck}</div><div><div class="ltitle">Envío ${envioInc?'incluido':'aparte'}</div><div class="ldesc">${envioInc?'El traslado hasta el domicilio está incluido en el precio del proyecto.':'El traslado se presupuesta por separado.'}</div>${!envioInc&&envioVal?`<div class="lval">Valor aprox. $ ${envioVal}</div>`:''}</div></div>
+      <div class="lcard ${instInc?'inc':'sep'}"><div style="flex-shrink:0;margin-top:1px;">${svgTool}</div><div><div class="ltitle">Instalación ${instInc?'incluida':'aparte'}</div><div class="ldesc">${instInc?'La colocación está incluida en el precio del proyecto.':'La colocación se presupuesta por separado según las condiciones del lugar.'}</div>${!instInc&&instVal?`<div class="lval">Valor aprox. $ ${instVal}</div>`:''}</div></div>
+    </div>`;
+
+  const footer = `
+    <div class="bot">
+      <div><div class="tlbl">${vars.length>1?'Valor desde':'Valor del proyecto'}</div><div class="tval">$ ${lowest||'—'}</div><div class="tnote">Precio Final<br>Valor sujeto a modificaciones según el replanteo en obra.</div></div>
+      <div><div class="vlbl">Validez del presupuesto</div><div class="vtxt">10 días hábiles<br>desde el ${fullDate}</div></div>
+    </div>`;
+
+  // Separador visual entre páginas (solo en pantalla)
+  const pageBreakVisual = muchosMods ? `
+    <div class="page-break-visual">· · · Página 2 · · ·</div>` : '';
+
+  // Div invisible para el corte real del PDF
+  const pageBreakReal = muchosMods ? `<div class="page-break" id="pdf-page-break"></div>` : '';
+
   return `<div class="preview-wrap"><div class="doc">
     <div class="hero">
       <div><div class="logo-name">T E C A</div><div class="logo-sub">— Carpintería de Diseño —</div></div>
@@ -356,17 +421,18 @@ function buildDoc(client,fullDate,project,mods,vars,envioInc,instInc,envioVal,in
       <div class="ptitle">${project}</div>
       ${galleryHTML}
       ${mods.length?`<div class="srow"><span class="slbl">Especificaciones</span><div class="sline"></div></div><div class="igrid" style="grid-template-columns:repeat(${colCount},1fr);">${modsHTML}</div>`:''}
-      ${vars.length?`<div class="srow"><span class="slbl">Variantes · Precio</span><div class="sline"></div></div><div style="margin-bottom:18px;">${varsHTML}</div>`:''}
-      <div class="srow"><span class="slbl">Logística</span><div class="sline"></div></div>
-      <div class="lrow">
-        <div class="lcard ${envioInc?'inc':'sep'}"><div style="flex-shrink:0;margin-top:1px;">${svgTruck}</div><div><div class="ltitle">Envío ${envioInc?'incluido':'aparte'}</div><div class="ldesc">${envioInc?'El traslado hasta el domicilio está incluido en el precio del proyecto.':'El traslado se presupuesta por separado.'}</div>${!envioInc&&envioVal?`<div class="lval">Valor aprox. $ ${envioVal}</div>`:''}</div></div>
-        <div class="lcard ${instInc?'inc':'sep'}"><div style="flex-shrink:0;margin-top:1px;">${svgTool}</div><div><div class="ltitle">Instalación ${instInc?'incluida':'aparte'}</div><div class="ldesc">${instInc?'La colocación está incluida en el precio del proyecto.':'La colocación se presupuesta por separado según las condiciones del lugar.'}</div>${!instInc&&instVal?`<div class="lval">Valor aprox. $ ${instVal}</div>`:''}</div></div>
-      </div>
+      ${!muchosMods ? varSection + logSection : ''}
     </div>
-    <div class="bot">
-      <div><div class="tlbl">${vars.length>1?'Valor desde':'Valor del proyecto'}</div><div class="tval">$ ${lowest||'—'}</div><div class="tnote">Precio Final<br>Valor sujeto a modificaciones según el replanteo en obra.</div></div>
-      <div><div class="vlbl">Validez del presupuesto</div><div class="vtxt">10 días hábiles<br>desde el ${fullDate}</div></div>
-    </div>
+    ${!muchosMods ? footer : ''}
+    ${pageBreakReal}
+    ${pageBreakVisual}
+    ${muchosMods ? `
+      ${p2header}
+      ${varSection}
+      ${logSection}
+      ${p2close}
+      ${footer}
+    ` : ''}
   </div></div>`;
 }
 
@@ -395,39 +461,72 @@ async function descargarPDF() {
   btn.textContent = 'Generando...';
   btn.style.opacity = '0.7';
   btn.style.pointerEvents = 'none';
+
+  // Ocultar separador visual antes de capturar
+  const visual = document.querySelector('.page-break-visual');
+  if (visual) visual.style.display = 'none';
+
   const el = document.getElementById('preview-content');
+  const pageBreak = document.getElementById('pdf-page-break');
+
   try {
-    const canvas = await html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#f0ebe3',
-      windowWidth: el.scrollWidth,
-      windowHeight: el.scrollHeight
-    });
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
-    const pxPerMm = canvas.width / pageW;
-    const pageHeightPx = pageH * pxPerMm;
-    let yOffset = 0, pageNum = 0;
-    while (yOffset < canvas.height) {
-      if (pageNum > 0) pdf.addPage();
-      const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
-      const tmpCanvas = document.createElement('canvas');
-      tmpCanvas.width = canvas.width;
-      tmpCanvas.height = sliceH;
-      tmpCanvas.getContext('2d').drawImage(canvas, 0, yOffset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-      const imgData = tmpCanvas.toDataURL('image/jpeg', 0.92);
-      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, sliceH / pxPerMm);
-      yOffset += pageHeightPx;
-      pageNum++;
+
+    if (pageBreak) {
+      // Dos páginas: capturar cada sección por separado
+      // Página 1: todo antes del salto
+      const breakY = pageBreak.getBoundingClientRect().top - el.getBoundingClientRect().top;
+      const fullCanvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#f0ebe3' });
+      const pxPerMm = fullCanvas.width / pageW;
+      const breakPx = Math.round(breakY * 2); // scale:2
+
+      // Página 1
+      const c1 = document.createElement('canvas');
+      c1.width = fullCanvas.width;
+      c1.height = breakPx;
+      c1.getContext('2d').drawImage(fullCanvas, 0, 0, fullCanvas.width, breakPx, 0, 0, fullCanvas.width, breakPx);
+      pdf.addImage(c1.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pageW, breakPx / pxPerMm);
+
+      // Página 2
+      const remaining = fullCanvas.height - breakPx;
+      if (remaining > 0) {
+        pdf.addPage();
+        const c2 = document.createElement('canvas');
+        c2.width = fullCanvas.width;
+        c2.height = remaining;
+        c2.getContext('2d').drawImage(fullCanvas, 0, breakPx, fullCanvas.width, remaining, 0, 0, fullCanvas.width, remaining);
+        pdf.addImage(c2.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pageW, remaining / pxPerMm);
+      }
+    } else {
+      // Una sola página o varias automáticas
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#f0ebe3' });
+      const pxPerMm = canvas.width / pageW;
+      const pageHeightPx = pageH * pxPerMm;
+      let yOffset = 0, pageNum = 0;
+      while (yOffset < canvas.height) {
+        if (pageNum > 0) pdf.addPage();
+        const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
+        const tmp = document.createElement('canvas');
+        tmp.width = canvas.width; tmp.height = sliceH;
+        tmp.getContext('2d').drawImage(canvas, 0, yOffset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        pdf.addImage(tmp.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pageW, sliceH / pxPerMm);
+        yOffset += pageHeightPx;
+        pageNum++;
+      }
     }
+
     const clientName = document.getElementById('clientName').value || 'presupuesto';
     pdf.save(`TECA_${clientName.replace(/\s+/g,'_')}.pdf`);
+
   } catch(e) {
     alert('Error al generar el PDF. Intentá de nuevo.');
+    console.error(e);
   }
+
+  if (visual) visual.style.display = '';
   btn.textContent = 'Descargar PDF';
   btn.style.opacity = '1';
   btn.style.pointerEvents = 'auto';
