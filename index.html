@@ -1,2367 +1,440 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TECA · Pedinos presupuesto</title>
-<link rel="stylesheet" href="colors_and_type.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TECA · Generador de Presupuestos</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  html, body { margin: 0; padding: 0; background: var(--bg-1); color: var(--fg-1); }
-  *, *::before, *::after { box-sizing: border-box; }
-
-  .page {
-    max-width: 1240px;
-    margin: 0 auto;
-    padding: 72px 32px 96px;
-  }
-
-  /* ---- Encabezado ---- */
-  .masthead { text-align: center; margin-bottom: 56px; }
-  .wordmark-lg {
-    font-family: var(--font-wordmark);
-    font-weight: var(--weight-regular);
-    letter-spacing: var(--tracking-mark);
-    text-indent: var(--tracking-mark);
-    font-size: 52px;
-    line-height: 1;
-    color: var(--c-ink);
-    margin-bottom: 26px;
-  }
-  .tick { display:block; width:1px; height:28px; background:var(--c-ink); opacity:.85; margin:0 auto 18px; }
-  .eyebrow-it {
-    font-family: var(--font-sans); font-style: italic; font-weight: 300;
-    font-size: 14px; letter-spacing: .04em; color: var(--c-ink); margin-bottom: 18px;
-  }
-  .masthead h1 {
-    font-family: var(--font-display); font-weight: 300; font-size: 48px;
-    line-height: 1.05; letter-spacing: -0.01em; margin: 0 0 16px;
-  }
-  .masthead p {
-    color: var(--fg-2); font-size: 16px; line-height: 1.7;
-    max-width: 46ch; margin: 0 auto;
-  }
-  .masthead p + p { margin-top: 2px; }
-
-  /* ---- Formulario ---- */
-  .form { min-width: 0; }
-
-  /* ---- Layout dos columnas ---- */
-  .layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 384px;
-    gap: 56px;
-    align-items: start;
-  }
-  .layout.hide { display: none; }
-
-  .lbl-hint { text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--c-ink-mute); font-style: italic; }
-  .measures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-  .measures.no-prof { grid-template-columns: repeat(2, 1fr); }
-  .measures.no-prof .t-prof { display: none; }
-
-  /* Tramos de medida (admite varias líneas) */
-  #tramos { margin-top: 4px; }
-  .tramo { margin-bottom: 22px; }
-  .tramo:last-child { margin-bottom: 0; }
-  .tramo-head {
-    display: flex; align-items: baseline; justify-content: space-between;
-    margin-bottom: 7px; min-height: 14px;
-  }
-  .tramo-n {
-    font-family: var(--font-sans); font-size: 12px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--c-ink); white-space: nowrap;
-  }
-  .tramo-x {
-    background: transparent; border: 0; cursor: pointer; padding: 0;
-    font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--c-ink-mute);
-    display: inline-flex; align-items: center; gap: 5px;
-    transition: color var(--dur-base) var(--ease-out);
-  }
-  .tramo-x:hover { color: var(--accent); }
-  .tramo-x .x { font-size: 14px; line-height: 1; }
-  .tramo.solo .tramo-head { display: none; }
-  .tramo + .tramo { margin-top: 34px; padding-top: 30px; border-top: 1px solid rgba(46,34,24,0.22); }
-
-  /* Módulos por tramo (cuadraditos de Cocina, dentro de cada tramo) */
-  .tramo-modules { margin-top: 18px; display: flex; flex-direction: column; gap: 16px; }
-  .tramo-modules[hidden] { display: none; }
-  .tmod-label {
-    display: block; font-family: var(--font-sans); font-size: 11px;
-    letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-3);
-  }
-  .tmod .model-row { margin-top: 9px; }
-
-  .add-tramo {
-    margin-top: 18px; background: transparent;
-    border: 1px dashed var(--c-ink-mute); border-radius: var(--radius-sm);
-    padding: 11px 20px; cursor: pointer;
-    font-family: var(--font-sans); font-size: 12px; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--c-ink-soft);
-    display: inline-flex; align-items: center; gap: 9px;
-    transition: border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
-  }
-  .add-tramo:hover { border-color: var(--c-ink-soft); color: var(--c-ink); }
-  .add-tramo .plus { font-size: 16px; line-height: 1; }
-
-  .field { margin-bottom: 16px; }
-  .field > label, .block-label {
-    display:block; font-family:var(--font-sans); font-size:11px;
-    letter-spacing:0.14em; text-transform:uppercase; color:var(--fg-3); margin-bottom:6px;
-  }
-  .input {
-    width:100%; background: transparent;
-    border: 0; border-bottom: 1px solid var(--c-ink); border-radius: 0;
-    padding: 10px 0; font-family: var(--font-display); font-size: 19px; font-weight: 400;
-    color: var(--c-ink); outline: none;
-    transition: border-color var(--dur-fast) var(--ease-out);
-  }
-  .input::placeholder { color: var(--c-ink-mute); font-style: italic; font-weight:300; }
-  .input:focus { border-color: var(--accent); }
-  .textarea { resize:none; min-height: 64px; line-height:1.5; }
-  .field-guide {
-    font-family: var(--font-sans); font-weight: 300; font-style: italic;
-    font-size: 13px; line-height: 1.6; color: var(--c-ink-mute);
-    margin: 4px 0 14px; max-width: none;
-  }
-
-  .group { display:grid; grid-template-columns: 1fr 1fr; gap: 16px 32px; }
-  .span-2 { grid-column: 1 / -1; }
-
-  /* Bloques de selección */
-  .block { margin-top: 38px; }
-  .split { display: grid; grid-template-columns: 1fr; gap: 0; margin-top: 0; }
-
-  /* Tarjetas de opción (material / herrajes) */
-  .card-grid { display: grid; gap: 14px; margin-top: 10px; }
-  .card-grid.two { grid-template-columns: 1fr 1fr; }
-  .card-grid.three { grid-template-columns: repeat(3, 1fr); }
-  .opt {
-    text-align: left; cursor: pointer; background: transparent;
-    border: 1px solid var(--border-hair); border-radius: var(--radius-sm);
-    padding: 18px 20px; display: flex; flex-direction: column; gap: 5px;
-    transition: border-color var(--dur-base) var(--ease-out),
-                background var(--dur-base) var(--ease-out);
-  }
-  .opt .opt-t {
-    font-family: var(--font-display); font-weight: 400; font-size: 21px;
-    line-height: 1.1; color: var(--c-ink);
-  }
-  .opt .opt-s {
-    font-family: var(--font-sans); font-size: 13px; font-weight: 300;
-    letter-spacing: 0.01em; color: var(--fg-3);
-  }
-  .opt:hover { border-color: var(--c-ink-soft); }
-  .opt.is-selected { border-color: var(--c-ink); background: rgba(149,113,79,0.07); }
-
-  /* Config (todo lo que sigue al proyecto) — oculto hasta elegir proyecto */
-  #config[hidden] { display: none; }
-  #config .block { margin-top: 22px; }
-  #config .proj-field { margin-top: 18px; }
-  .proj-field[hidden] { display: none; }
-  #herraje-block[hidden] { display: none; }
-  .opt[hidden] { display: none; }
-
-  /* Control Sí / No + cantidad — celdas cuadradas tipo tarjeta */
-  .yn-line { display: flex; align-items: center; gap: 34px; flex-wrap: wrap; margin-top: 9px; }
-  .yn { display: inline-flex; gap: 12px; }
-  .yn-btn {
-    position: relative; min-width: 72px; cursor: pointer;
-    background: transparent; border: 1px solid var(--border-hair); border-radius: var(--radius-sm);
-    padding: 9px 18px 10px;
-    font-family: var(--font-display); font-weight: 400; font-size: 18px; line-height: 1;
-    color: var(--c-ink-soft); text-align: center;
-    transition: border-color var(--dur-base) var(--ease-out),
-                background var(--dur-base) var(--ease-out),
-                color var(--dur-base) var(--ease-out);
-  }
-  .yn-btn:hover { border-color: var(--c-ink-soft); color: var(--c-ink); }
-  .yn-btn.is-selected { border-color: var(--c-ink); background: rgba(149,113,79,0.07); color: var(--c-ink); }
-
-  .yn-count { display: none; align-items: center; gap: 14px; }
-  .yn-count.show { display: flex; }
-  .yn-count label {
-    font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.14em;
-    text-transform: uppercase; color: var(--fg-3);
-  }
-  .count-input { width: 92px; }
-
-  /* Modelos (puertas / cajones / alacena) — botones chicos que se suman */
-  .model-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
-  .model {
-    position: relative; cursor: pointer; background: transparent;
-    border: 1px solid var(--border-hair); border-radius: var(--radius-sm);
-    padding: 11px 10px 8px; width: 78px;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    color: var(--c-ink);
-    transition: border-color var(--dur-base) var(--ease-out),
-                background var(--dur-base) var(--ease-out);
-  }
-  .model svg { display: block; color: var(--c-ink); }
-  .model .model-size {
-    font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.03em;
-    color: var(--c-ink-soft); line-height: 1;
-  }
-  .model .model-measure {
-    font-family: var(--font-sans); font-size: 10px; letter-spacing: 0.02em;
-    color: var(--c-ink-mute); line-height: 1; margin-top: -2px; white-space: nowrap;
-  }
-  .model .model-note {
-    font-family: var(--font-sans); font-size: 9.5px; font-style: italic; letter-spacing: 0.01em;
-    color: var(--accent); line-height: 1; margin-top: 1px; white-space: nowrap;
-  }
-  .model:hover { border-color: var(--c-ink-soft); }
-  .model.on { border-color: var(--c-ink); background: rgba(149,113,79,0.07); }
-  .model.on .model-size { color: var(--c-ink); }
-  .model-count {
-    position: absolute; top: -8px; right: -8px;
-    min-width: 20px; height: 20px; padding: 0 5px;
-    display: none; align-items: center; justify-content: center;
-    background: var(--c-ink); color: var(--c-almond); border-radius: 999px;
-    font-family: var(--font-sans); font-size: 11px; font-weight: 500; line-height: 1;
-  }
-  .model.on .model-count { display: inline-flex; }
-  .model-minus {
-    position: absolute; top: -8px; left: -8px; width: 20px; height: 20px;
-    display: none; align-items: center; justify-content: center;
-    background: var(--bg-1); color: var(--c-ink-soft);
-    border: 1px solid var(--c-ink-soft); border-radius: 999px;
-    font-size: 14px; line-height: 1; cursor: pointer;
-    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
-  }
-  .model.on .model-minus { display: inline-flex; }
-  .model-minus:hover { color: var(--accent); border-color: var(--accent); }
-  /* botón sin lugar en el tramo: queda atenuado y no suma (sí se puede restar) */
-  .model.is-full { opacity: 0.34; }
-  .model.is-full:not(.on) { cursor: not-allowed; }
-  .model.is-full:hover { border-color: var(--border-hair); }
-
-  /* Capacidad del tramo: cuánto entra según el ancho cargado */
-  .tramo-cap { margin: 2px 0 16px; display: flex; flex-direction: column; gap: 9px; }
-  .tramo-cap .cap-row[data-cap="upper"] { margin-top: 9px; }
-  .tramo-cap .cap-empty {
-    font-family: var(--font-sans); font-size: 12px; font-style: italic;
-    color: var(--c-ink-mute); line-height: 1.4;
-  }
-  .tramo-cap.no-ancho .cap-row { display: none; }
-  .tramo-cap.no-ancho .cap-foot { display: none; }
-  .tramo-cap:not(.no-ancho) .cap-empty { display: none; }
-  .cap-foot {
-    margin: 5px 0 0; font-family: var(--font-sans); font-size: 11.5px; font-style: italic;
-    line-height: 1.5; color: var(--c-ink-mute); white-space: nowrap;
-  }
-  @media (max-width: 640px) { .cap-foot { white-space: normal; } }
-  .cap-row { display: grid; grid-template-columns: 88px 1fr auto; align-items: center; gap: 12px; }
-  .cap-name {
-    font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.04em;
-    text-transform: uppercase; color: var(--c-ink-soft);
-  }
-  .cap-bar {
-    position: relative; height: 5px; border-radius: 999px;
-    background: rgba(46,34,24,0.10); overflow: hidden;
-  }
-  .cap-fill {
-    position: absolute; left: 0; top: 0; bottom: 0; width: 0;
-    background: var(--accent); border-radius: 999px;
-    transition: width var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
-  }
-  .cap-num {
-    font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.02em;
-    color: var(--c-ink-soft); white-space: nowrap; min-width: 70px; text-align: right;
-  }
-  .cap-row.is-done .cap-fill { background: var(--c-moss); }
-  .cap-row.is-done .cap-num { color: var(--c-moss); }
-  .cap-row.is-over .cap-fill { background: var(--signal-error); }
-  .cap-row.is-over .cap-num { color: var(--signal-error); }
-  @keyframes capFlash {
-    0% { background: rgba(149,113,79,0.20); }
-    100% { background: transparent; }
-  }
-  .cap-row.flash { animation: capFlash 620ms var(--ease-out); border-radius: var(--radius-sm); }
-
-  /* Piezas — íconos sin recuadro */
-  .piece-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px 6px; margin-top: 8px; }
-  .piece {
-    cursor: pointer; background: transparent; border: 0; padding: 6px 2px 4px;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    color: var(--c-ink-soft);
-    transition: color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
-    position: relative;
-  }
-  .piece svg { display: block; transition: stroke-width var(--dur-base) var(--ease-out); }
-  .piece .name {
-    font-family: var(--font-sans); font-size: 11px;
-    letter-spacing: 0.04em; line-height: 1; text-align: center;
-    color: var(--c-ink-soft); transition: color var(--dur-base) var(--ease-out);
-  }
-  .piece:hover { color: var(--c-ink); transform: translateY(-2px); }
-  .piece:hover svg { stroke-width: 1.35; }
-  .piece:hover .name { color: var(--c-ink); }
-  .piece.is-selected { color: var(--c-ink); }
-  .piece.is-selected .name { color: var(--c-ink); }
-  .piece.is-selected::after {
-    content: ""; display: block; width: 14px; height: 1px; background: var(--c-ink);
-    position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
-  }
-
-  /* Tonos — círculos */
-  .tone-row { display: flex; flex-wrap: wrap; gap: 18px 16px; margin-top: 8px; }
-  .tone {
-    cursor: pointer; background: transparent; border: 0; padding: 0;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    color: var(--c-ink-soft); transition: color var(--dur-base) var(--ease-out);
-  }
-  .tone .chip {
-    width: 44px; height: 44px; border-radius: 999px;
-    border: 1px solid rgba(46,34,24,0.12);
-    background-size: cover; background-position: center;
-    transition: border-color var(--dur-base) var(--ease-out),
-                transform var(--dur-base) var(--ease-out),
-                box-shadow var(--dur-base) var(--ease-out);
-  }
-  .tone .name {
-    font-family: var(--font-sans); font-size: 11px;
-    letter-spacing: 0.04em; line-height: 1; text-align: center;
-  }
-  .tone:hover { color: var(--c-ink); }
-  .tone:hover .chip { transform: translateY(-2px); border-color: var(--c-ink); box-shadow: 0 4px 10px rgba(46,34,24,0.10); }
-  .tone.is-selected { color: var(--c-ink); }
-  .tone.is-selected .chip { border-color: var(--c-ink); box-shadow: 0 0 0 2px var(--c-almond), 0 0 0 3px var(--c-ink); }
-  .chip.is-otro { background: transparent; border: 1px dashed var(--c-ink-mute); position: relative; }
-  .chip.is-otro::after { content: "+"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-sans); font-size: 16px; line-height: 1; color: var(--c-ink-mute); }
-  .tone-note { font-family: var(--font-sans); font-style: italic; font-weight: 300; font-size: 13px; color: var(--c-ink-mute); margin: 10px 0 0; max-width: 52ch; }
-  .tone-other { margin-top: 14px; max-width: 340px; }
-
-  /* Resumen de selección */
-  .selected-row {
-    margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--border-hair);
-    display: flex; align-items: center; gap: 14px;
-    font-family: var(--font-display); font-style: italic; font-weight: 400;
-    font-size: 19px; color: var(--c-ink);
-  }
-  .selected-row .lbl {
-    font-family: var(--font-sans); font-style: normal; font-weight: 400;
-    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-3);
-  }
-  .selected-row .dot { width: 18px; height: 18px; border-radius: 999px; border: 1px solid var(--border-hair); background: #C7AF94; }
-  .selected-row .sep { color: var(--fg-3); }
-
-  /* Submit */
-  .actions { margin-top: 32px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
-  .btn {
-    font-family: var(--font-sans); font-weight: 400; font-size: 13px;
-    letter-spacing: 0.14em; text-transform: uppercase; padding: 14px 28px;
-    border-radius: 0; cursor: pointer; border: 1px solid var(--c-ink);
-    background: var(--c-ink); color: var(--c-almond);
-    transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
-  }
-  .btn:hover { opacity: .88; }
-  .btn:active { transform: scale(0.985); }
-  .microcopy { color: var(--fg-3); font-size: 12px; font-style: italic; }
-
-  /* Pie de contacto */
-  .contact {
-    margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--border-hair);
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
-    color: var(--fg-2); font-size: 14px; line-height: 1.6;
-  }
-  .contact span { display: flex; align-items: center; gap: 10px; }
-
-  /* Gracias */
-  .thanks { display: none; text-align: center; padding: 8px 0 40px; }
-  .thanks.show { display: block; }
-  .form.hide { display: none; }
-  .thanks h2 {
-    font-family: var(--font-display); font-weight: 300; font-size: 30px;
-    line-height: 1.2; letter-spacing: -0.005em; margin: 0 auto 20px; max-width: 24ch;
-    color: var(--c-ink);
-  }
-  .thanks p { color: var(--fg-2); font-size: 17px; max-width: 46ch; margin: 0 auto 18px; }
-  .thanks-actions { margin: 26px auto 6px; display: flex; justify-content: center; }
-  .thanks .btn { display: inline-block; text-decoration: none; white-space: nowrap; }
-  .plan-wrap { display: none; flex-direction: column; align-items: center; margin: 30px auto 6px; }
-  .plan-wrap.show { display: flex; }
-  .plan-img {
-    width: 100%; max-width: 280px; height: auto; display: block;
-    border: 1px solid var(--border-hair); border-radius: var(--radius-sm);
-    margin-bottom: 12px;
-  }
-  .plan-hint {
-    font-family: var(--font-sans); font-style: italic; font-weight: 300;
-    font-size: 13px; line-height: 1.5; color: var(--c-ink-mute);
-    max-width: 34ch; margin: 0 0 12px;
-  }
-  .thanks .note {
-    font-family: var(--font-display); font-style: italic; font-weight: 400;
-    font-size: 18px; line-height: 1.5; color: var(--c-ink-soft);
-    max-width: none; margin: 16px auto 32px;
-  }
-  .link-btn {
-    background: transparent; border: 0; cursor: pointer; padding: 0;
-    font-family: var(--font-sans); font-size: 13px; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--c-ink);
-    border-bottom: 1px solid var(--border-hair); padding-bottom: 4px;
-  }
-
-  /* ---- Panel "Tu encargo" (plano técnico) ---- */
-  .encargo { position: sticky; top: 28px; }
-  .bp-eyebrow {
-    display: block; text-align: center;
-    font-family: var(--font-sans); font-style: italic; font-weight: 300;
-    font-size: 12px; letter-spacing: 0.06em; color: var(--c-ink-mute);
-    margin-bottom: 12px;
-  }
-  .bp-frame {
-    position: relative;
-    background: var(--bg-2);
-    border: 1px solid var(--border-hair);
-    border-radius: var(--radius-sm);
-    padding: 30px 26px 26px;
-    overflow: hidden;
-  }
-  .bp-ruler { position: absolute; top: 16px; right: 16px; width: 46px; height: 46px; color: var(--c-ink); opacity: 0.26; }
-  .bp-cross { position: absolute; top: 46%; right: -13px; width: 40px; height: 40px; color: var(--c-ink); opacity: 0.20; }
-
-  .bp-stage {
-    position: relative;
-    min-height: 252px;
-    padding: 16px 14px 42px 42px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .bp-figure { width: 100%; display: flex; align-items: center; justify-content: center; }
-  .bp-figure svg { display: block; width: 100%; height: auto; max-height: 214px; color: var(--c-ink); }
-  .bp-figure.is-empty svg { opacity: 0.4; }
-
-  .bp-alto {
-    position: absolute; left: 24px; top: 18px; bottom: 48px; width: 1px; background: var(--accent);
-  }
-  .bp-alto::before, .bp-alto::after { content: ""; position: absolute; left: -3px; width: 7px; height: 1px; background: var(--accent); }
-  .bp-alto::before { top: 0; }
-  .bp-alto::after { bottom: 0; }
-  .bp-ancho {
-    position: absolute; left: 42px; right: 18px; bottom: 28px; height: 1px; background: var(--accent);
-  }
-  .bp-ancho::before, .bp-ancho::after { content: ""; position: absolute; top: -3px; width: 1px; height: 7px; background: var(--accent); }
-  .bp-ancho::before { left: 0; }
-  .bp-ancho::after { right: 0; }
-  .bp-dim-lbl {
-    position: absolute; font-family: var(--font-sans); font-weight: 400;
-    font-size: 10px; letter-spacing: 0.08em; color: var(--accent);
-    white-space: nowrap; background: var(--bg-2); padding: 0 4px;
-  }
-  .bp-alto .bp-dim-lbl { left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); }
-  .bp-ancho .bp-dim-lbl { left: 50%; top: 50%; transform: translate(-50%, -50%); }
-
-  .bp-name {
-    text-align: center; font-family: var(--font-sans); font-weight: 400;
-    font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--c-ink); margin-top: 4px;
-  }
-  .bp-name.is-empty { color: var(--c-ink-mute); font-style: italic; text-transform: none; letter-spacing: 0.04em; font-weight: 300; }
-
-  .bp-meta { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 20px; }
-  .bp-finish { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-display); font-size: 19px; line-height: 1.2; white-space: nowrap; color: var(--c-ink); }
-  .bp-finish.is-empty { display: none; }
-  .bp-chip { width: 18px; height: 18px; border-radius: 999px; border: 1px solid var(--border-hair); background: transparent; background-size: cover; background-position: center; flex: none; }
-  .bp-row { font-family: var(--font-sans); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-ink-soft); white-space: nowrap; }
-  .bp-row.is-empty { display: none; }
-
-  .bp-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center; }
-
-  /* Módulos elegidos, dentro del panel "tu encargo" */
-  .bp-modules { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
-  .bp-modules:empty { display: none; }
-  .bp-mod-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .bp-mod-title {
-    font-family: var(--font-sans); font-size: 10px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--c-ink-mute);
-  }
-  .bp-mod-items { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .bp-mod {
-    display: inline-flex; align-items: center; gap: 8px;
-    border: 1px solid var(--border-hair); border-radius: var(--radius-sm);
-    padding: 5px 10px 5px 8px; color: var(--c-ink);
-  }
-  .bp-mod svg { display: block; color: var(--c-ink); }
-  .bp-mod .lab {
-    font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.02em;
-    color: var(--c-ink-soft); white-space: nowrap;
-  }
-  .bp-tag {
-    font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.04em;
-    color: var(--c-ink-mute); border: 1px solid var(--border-hair); border-radius: var(--radius-sm);
-    padding: 7px 12px;
-    transition: color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
-  }
-  .bp-tag.on { color: var(--c-ink); border-color: var(--c-ink-soft); }
-
-  @media (max-width: 920px) {
-    .layout { grid-template-columns: 1fr; gap: 40px; }
-    .encargo { position: static; margin-top: 38px; margin-bottom: 4px; }
-    .bp-frame { max-width: 440px; margin: 0 auto; }
-  }
-  @media (max-width: 600px) {
-    .group { grid-template-columns: 1fr; }
-    .measures { grid-template-columns: 1fr; }
-    .contact { grid-template-columns: 1fr; }
-    .card-grid.two, .card-grid.three { grid-template-columns: 1fr; }
-    .piece-grid { grid-template-columns: repeat(3, 1fr); }
-    .masthead h1 { font-size: 38px; }
-  }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: #f0ebe3; padding: 32px 20px; min-height: 100vh; }
+.container { max-width: 780px; margin: 0 auto; }
+.page-header { text-align: center; margin-bottom: 28px; }
+.page-logo { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; letter-spacing: 0.42em; color: #2c3e2d; text-transform: uppercase; }
+.page-logo-sub { font-size: 10px; letter-spacing: 0.3em; color: #8a6040; text-transform: uppercase; margin-top: 4px; }
+.app { background: #f7f2ec; border: 0.5px solid #d4b896; border-radius: 4px; overflow: hidden; }
+.tabs { display: flex; border-bottom: 1px solid #d4b896; background: #fff9f2; }
+.tab { padding: 12px 24px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; color: #8a6040; border-bottom: 2px solid transparent; background: #fff9f2; border-top: none; border-left: none; border-right: none; font-family: 'DM Sans', sans-serif; }
+.tab.active { color: #2c3e2d; border-bottom: 2px solid #2c3e2d; }
+.panel { display: none; padding: 32px; }
+.panel.active { display: block; }
+.form-section { margin-bottom: 26px; }
+.fsec-title { font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: #8a6040; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 0.5px solid #d4b896; }
+.frow { display: grid; gap: 12px; margin-bottom: 12px; }
+.frow.c2 { grid-template-columns: 1fr 1fr; }
+.frow.c1 { grid-template-columns: 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7a5c3a; }
+.field input, .field select, .field textarea { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 300; padding: 9px 11px; border: 0.5px solid #d4b896; background: #fff9f2; color: #2c3e2d; border-radius: 2px; outline: none; width: 100%; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #2c3e2d; }
+.field textarea { resize: vertical; min-height: 80px; }
+.date-tag { font-size: 10px; color: #8da88e; margin-top: 4px; }
+.mod-block { background: #fff9f2; border: 0.5px solid #d4b896; border-left: 3px solid #c17f4a; border-radius: 3px; padding: 16px; margin-bottom: 10px; }
+.var-block { background: #ede0cc; border: 0.5px solid #b8936a; border-left: 3px solid #7a5030; border-radius: 3px; padding: 16px; margin-bottom: 10px; }
+.block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.mod-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: #c17f4a; }
+.var-label-form { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: #7a5030; }
+.rm-btn { background: #e8d0b0; border: none; color: #7a5030; cursor: pointer; font-size: 18px; line-height: 1; border-radius: 2px; padding: 2px 7px; font-family: 'DM Sans', sans-serif; }
+.extra-field { margin-top: 10px; display: none; }
+.extra-field.show { display: block; }
+.img-upload-area { border: 1.5px dashed #d4b896; border-radius: 3px; padding: 18px; text-align: center; cursor: pointer; background: #fff9f2; }
+.img-upload-area input { display: none; }
+.img-preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.img-thumb { position: relative; }
+.img-thumb img { width: 100%; height: 80px; object-fit: cover; border-radius: 2px; border: 0.5px solid #d4b896; display: block; }
+.img-thumb-rm { position: absolute; top: 3px; right: 3px; background: rgba(44,62,45,0.8); color: #e8dfc8; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 12px; cursor: pointer; line-height: 18px; text-align: center; padding: 0; }
+.preview-wrap { background: #f0ebe3; padding: 16px; border-radius: 3px; }
+.doc { background: #f7f2ec; }
+.hero { background: #2c3e2d; padding: 24px 32px 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+.logo-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; letter-spacing: 0.42em; color: #e8dfc8; text-transform: uppercase; }
+.logo-sub { font-size: 8px; letter-spacing: 0.3em; color: #8da88e; text-transform: uppercase; margin-top: 3px; }
+.cblock { text-align: right; }
+.clbl { font-size: 8px; letter-spacing: 0.2em; color: #8da88e; text-transform: uppercase; margin-bottom: 3px; }
+.cname { font-family: 'Cormorant Garamond', serif; font-size: 17px; color: #e8dfc8; }
+.cmeta { font-size: 9px; color: #6b8a6c; margin-top: 3px; line-height: 1.6; }
+.abar { height: 3px; background: #c17f4a; }
+.dbody { padding: 24px 32px; }
+.srow { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.slbl { font-size: 8px; letter-spacing: 0.28em; color: #8a6040; text-transform: uppercase; white-space: nowrap; }
+.sline { flex: 1; height: 0.5px; background: #d4b896; }
+.ptitle { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; color: #2c3e2d; margin-bottom: 16px; }
+.igrid { display: grid; gap: 10px; margin-bottom: 18px; }
+.icard { background: #fff9f2; border: 0.5px solid #d4b896; border-top: 2px solid #c17f4a; border-radius: 3px; padding: 14px; }
+.inum { font-size: 8px; letter-spacing: 0.18em; color: #c17f4a; text-transform: uppercase; margin-bottom: 5px; }
+.iname { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: #2c3e2d; margin-bottom: 2px; }
+.idim { font-size: 10px; color: #8a6040; margin-bottom: 8px; }
+.sdivl { height: 0.5px; background: #d4b896; margin-bottom: 7px; }
+.spc { font-size: 10px; color: #5c4030; line-height: 1.8; display: flex; gap: 5px; }
+.sdot { color: #c17f4a; flex-shrink: 0; }
+.vcard { background: #ede0cc; border: 0.5px solid #b8936a; border-left: 3px solid #7a5030; border-radius: 3px; padding: 13px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 8px; }
+.vcard.feat { background: #7a5030; border-color: #7a5030; }
+.vtag { font-size: 8px; letter-spacing: 0.18em; color: #5c3a18; text-transform: uppercase; background: #d4b896; display: inline-block; padding: 2px 6px; border-radius: 2px; margin-bottom: 5px; }
+.vcard.feat .vtag { background: #5c3a18; color: #f5ead8; }
+.vname { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #3d2510; margin-bottom: 5px; }
+.vcard.feat .vname { color: #f5ead8; }
+.vdesc { font-size: 10px; color: #6b4020; line-height: 1.7; white-space: pre-wrap; }
+.vcard.feat .vdesc { color: #e8d0b0; }
+.vprice-lbl { font-size: 8px; letter-spacing: 0.13em; color: #6b4020; text-transform: uppercase; text-align: right; white-space: nowrap; }
+.vcard.feat .vprice-lbl { color: #e8d0b0; }
+.vprice { font-family: 'Cormorant Garamond', serif; font-size: 21px; color: #3d2510; text-align: right; white-space: nowrap; }
+.vcard.feat .vprice { color: #f5ead8; }
+.lrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lcard { border-radius: 3px; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; }
+.lcard.inc { background: #f0f5f0; border: 0.5px solid #8da88e; }
+.lcard.sep { background: #fdf6ee; border: 0.5px solid #d4b896; }
+.ltitle { font-size: 10px; font-weight: 500; margin-bottom: 2px; }
+.lcard.inc .ltitle { color: #2c3e2d; }
+.lcard.sep .ltitle { color: #8a6040; }
+.ldesc { font-size: 9px; line-height: 1.6; }
+.lcard.inc .ldesc { color: #4a6b4b; }
+.lcard.sep .ldesc { color: #7a5c3a; }
+.lval { font-family: 'Cormorant Garamond', serif; font-size: 12px; color: #8a6040; margin-top: 3px; }
+.bot { background: #2c3e2d; padding: 22px 32px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
+.tlbl { font-size: 8px; letter-spacing: 0.24em; color: #8da88e; text-transform: uppercase; margin-bottom: 3px; }
+.tval { font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 300; color: #e8dfc8; }
+.tnote { font-size: 9px; color: #5a7a5b; margin-top: 3px; line-height: 1.6; max-width: 240px; }
+.vlbl { font-size: 8px; letter-spacing: 0.18em; color: #8da88e; text-transform: uppercase; margin-bottom: 3px; text-align: right; }
+.vtxt { font-size: 11px; color: #c6d9c7; line-height: 1.7; text-align: right; }
+.empty-state { text-align: center; padding: 50px 20px; color: #8a6040; }
+.empty-big { font-family: 'Cormorant Garamond', serif; font-size: 30px; color: #d4b896; margin-bottom: 8px; }
+@media (max-width: 600px) {
+  body { padding: 16px 12px; }
+  .frow.c2 { grid-template-columns: 1fr; }
+  .panel { padding: 20px; }
+  .hero { flex-direction: column; gap: 14px; padding: 18px 20px; }
+  .cblock { text-align: left; }
+  .dbody { padding: 18px 20px; }
+  .bot { flex-direction: column; align-items: flex-start; padding: 18px 20px; }
+  .lrow { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
-<template id="__bundler_thumbnail">
-  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <rect width="100" height="100" fill="#EADED0"></rect>
-    <g fill="none" stroke="#2E2218" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="34" y="40" width="32" height="30"></rect>
-      <line x1="30" y1="40" x2="70" y2="40"></line>
-      <line x1="38" y1="70" x2="38" y2="78"></line>
-      <line x1="62" y1="70" x2="62" y2="78"></line>
-      <line x1="50" y1="40" x2="50" y2="70"></line>
-    </g>
-    <text x="50" y="32" font-family="Georgia, serif" font-size="15" letter-spacing="4" fill="#2E2218" text-anchor="middle">TECA</text>
-  </svg>
-</template>
-<div class="page">
-
-  <header class="masthead">
-    <div class="wordmark-lg">TECA</div>
-    <div class="eyebrow-it">— encargos —</div>
-    <h1 id="masthead-title">Pedinos presupuesto.</h1>
-    <p class="masthead-sub">Contanos qué proyecto tenés en mente, el espacio donde te lo imaginás, y algunas referencias más.</p>
-  </header>
-
-  <div class="layout" id="layout">
-
-  <form class="form" id="presupuesto">
-
-    <div class="block">
-      <span class="block-label">¿Qué proyecto tenés en mente?</span>
-      <div class="piece-grid" id="piece-grid">
-          <button type="button" class="piece" data-piece="Cocina">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="6" y="6" width="13" height="9"></rect><rect x="21" y="6" width="13" height="5"></rect>
-              <line x1="6" y1="22" x2="34" y2="22"></line><rect x="6" y="22" width="28" height="12"></rect>
-              <circle cx="13" cy="28" r="3"></circle><line x1="22" y1="26" x2="22" y2="30"></line><line x1="28" y1="26" x2="28" y2="30"></line>
-            </svg>
-            <span class="name">Cocina</span>
-          </button>
-          <button type="button" class="piece" data-piece="Mesa">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="16" x2="35" y2="16"></line><line x1="5" y1="19" x2="35" y2="19"></line>
-              <line x1="9" y1="19" x2="9" y2="33"></line><line x1="31" y1="19" x2="31" y2="33"></line>
-              <line x1="13" y1="19" x2="13" y2="28"></line><line x1="27" y1="19" x2="27" y2="28"></line>
-            </svg>
-            <span class="name">Mesa</span>
-          </button>
-          <button type="button" class="piece" data-piece="Vestidor">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="6" y="6" width="28" height="28"></rect><line x1="20" y1="6" x2="20" y2="34"></line>
-              <line x1="9" y1="12" x2="17" y2="12"></line>
-              <path d="M11 12v3a2 2 0 0 0 2 2"></path><path d="M15 12v3a2 2 0 0 1-2 2"></path>
-              <line x1="23" y1="14" x2="31" y2="14"></line><line x1="23" y1="20" x2="31" y2="20"></line><line x1="23" y1="26" x2="31" y2="26"></line>
-            </svg>
-            <span class="name">Vestidor</span>
-          </button>
-          <button type="button" class="piece" data-piece="Rack TV">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="7" y="6" width="26" height="14" rx="0.5"></rect><line x1="15" y1="22" x2="25" y2="22"></line>
-              <rect x="5" y="24" width="30" height="10"></rect><line x1="20" y1="24" x2="20" y2="34"></line>
-              <circle cx="12.5" cy="29" r="0.6" fill="currentColor"></circle><circle cx="27.5" cy="29" r="0.6" fill="currentColor"></circle>
-            </svg>
-            <span class="name">Rack TV</span>
-          </button>
-          <button type="button" class="piece" data-piece="Escritorio">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="4" y1="14" x2="36" y2="14"></line><line x1="4" y1="16" x2="36" y2="16"></line>
-              <rect x="22" y="16" width="11" height="14"></rect>
-              <line x1="22" y1="20" x2="33" y2="20"></line><line x1="22" y1="25" x2="33" y2="25"></line>
-              <line x1="7" y1="16" x2="7" y2="33"></line>
-              <line x1="11" y1="29" x2="22" y2="29"></line><line x1="11" y1="29" x2="11" y2="34"></line>
-            </svg>
-            <span class="name">Escritorio</span>
-          </button>
-          <button type="button" class="piece" data-piece="Respaldo">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="6" y="6" width="28" height="20"></rect><line x1="6" y1="10" x2="34" y2="10"></line>
-              <line x1="4" y1="28" x2="36" y2="28"></line><line x1="4" y1="32" x2="36" y2="32"></line>
-              <line x1="11" y1="22" x2="19" y2="22"></line><line x1="11" y1="25" x2="19" y2="25"></line>
-              <line x1="21" y1="22" x2="29" y2="22"></line><line x1="21" y1="25" x2="29" y2="25"></line>
-            </svg>
-            <span class="name">Respaldo</span>
-          </button>
-          <button type="button" class="piece" data-piece="Mesa de luz">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 4 h6 l2 6 h-10 z"></path><line x1="19" y1="10" x2="19" y2="18"></line>
-              <line x1="6" y1="18" x2="32" y2="18"></line><line x1="6" y1="20" x2="32" y2="20"></line>
-              <rect x="9" y="20" width="20" height="14"></rect>
-              <line x1="9" y1="26" x2="29" y2="26"></line><circle cx="19" cy="29.5" r="0.7" fill="currentColor"></circle>
-              <line x1="11" y1="23" x2="13" y2="23"></line>
-            </svg>
-            <span class="name">Mesa de luz</span>
-          </button>
-          <button type="button" class="piece" data-piece="Exterior">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="10" x2="32" y2="10"></line>
-              <line x1="11" y1="7" x2="11" y2="34"></line><line x1="29" y1="7" x2="29" y2="34"></line>
-              <line x1="15" y1="7" x2="15" y2="13"></line><line x1="20" y1="7" x2="20" y2="13"></line><line x1="25" y1="7" x2="25" y2="13"></line>
-              <line x1="6" y1="34" x2="34" y2="34"></line>
-            </svg>
-            <span class="name">Exterior</span>
-          </button>
-          <button type="button" class="piece" data-piece="Biblioteca">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="7" y="5" width="26" height="30"></rect>
-              <line x1="7" y1="15" x2="33" y2="15"></line><line x1="7" y1="25" x2="33" y2="25"></line>
-              <line x1="11" y1="7" x2="11" y2="13"></line><line x1="14" y1="7" x2="14" y2="13"></line><line x1="17" y1="8" x2="17" y2="13"></line>
-              <line x1="22" y1="17" x2="22" y2="23"></line><line x1="25" y1="17" x2="25" y2="23"></line><line x1="28" y1="18" x2="28" y2="23"></line>
-              <line x1="11" y1="27" x2="11" y2="33"></line><line x1="14" y1="27" x2="14" y2="33"></line>
-            </svg>
-            <span class="name">Biblioteca</span>
-          </button>
-          <button type="button" class="piece" data-piece="Otro">
-            <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="14" cy="20" r="1.5" fill="currentColor" stroke="none"></circle>
-              <circle cx="20" cy="20" r="1.5" fill="currentColor" stroke="none"></circle>
-              <circle cx="26" cy="20" r="1.5" fill="currentColor" stroke="none"></circle>
-            </svg>
-            <span class="name">Otro</span>
-          </button>
-        </div>
-      </div>
-
-    <!-- Config: aparece recién cuando se elige un proyecto -->
-    <div id="config" hidden>
-
-      <!-- Medidas (primera pregunta del proyecto, admite varios tramos) -->
-      <div class="block" id="medidas-block">
-        <span class="block-label">Medidas aproximadas <span class="lbl-hint">(cm · si no las tenés exactas, estimá)</span></span>
-        <div id="tramos"></div>
-        <button type="button" class="add-tramo" id="add-tramo">
-          <span class="plus">+</span> Agregar tramo
-        </button>
-        <p class="field-guide" id="tramo-guide" style="margin-top:12px;">Sumá un tramo por cada parte del mueble que tenga medidas distintas — por ejemplo, los lados de una cocina en L.</p>
-      </div>
-
-      <!-- Material -->
-      <div class="block">
-        <span class="block-label">Material</span>
-        <div class="card-grid two" id="material-grid">
-          <button type="button" class="opt" data-opt="material" data-val="Madera maciza">
-            <span class="opt-t">Madera maciza</span>
-            <span class="opt-s">Paraíso, petiribí, kiri</span>
-          </button>
-          <button type="button" class="opt" data-opt="material" data-val="MDF pintado">
-            <span class="opt-t">MDF pintado</span>
-            <span class="opt-s">Laqueado liso o texturado</span>
-          </button>
-          <button type="button" class="opt" data-opt="material" data-val="Melamina">
-            <span class="opt-t">Melamina</span>
-            <span class="opt-s">Resistente y económica</span>
-          </button>
-          <button type="button" class="opt" data-opt="material" data-val="Mixto">
-            <span class="opt-t">Mixto</span>
-            <span class="opt-s">Combinación a medida</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Terminación -->
-      <div class="block">
-        <span class="block-label">Tipo de terminación</span>
-        <div class="tone-row" id="tone-row"></div>
-        <input type="text" class="input tone-other" id="tone-other" placeholder="Escribí el color o la terminación que buscás" hidden>
-        <p class="tone-note" id="tone-note">Elegí un material para ver las terminaciones.</p>
-      </div>
-
-      <!-- Puertas (proyectos sin módulos por tramo) — sí / no + cantidad -->
-      <div class="block proj-field" data-proj="Biblioteca,Escritorio,Rack TV,Mesa de luz,Vestidor,Otro" data-yn="puertas" hidden>
-        <span class="block-label">Puertas</span>
-        <div class="yn-line">
-          <div class="yn">
-            <button type="button" class="yn-btn" data-yn-val="no">No</button>
-            <button type="button" class="yn-btn" data-yn-val="si">Sí</button>
-          </div>
-          <div class="yn-count">
-            <label for="puertas-count">¿Cuántas?</label>
-            <input class="input count-input" id="puertas-count" inputmode="numeric" data-yn-count placeholder="1">
-          </div>
-        </div>
-      </div>
-
-      <!-- Cajones (proyectos sin módulos por tramo) — sí / no + cantidad -->
-      <div class="block proj-field" data-proj="Biblioteca,Escritorio,Rack TV,Mesa de luz,Vestidor,Otro" data-yn="cajones" hidden>
-        <span class="block-label">Cajones</span>
-        <div class="yn-line">
-          <div class="yn">
-            <button type="button" class="yn-btn" data-yn-val="no">No</button>
-            <button type="button" class="yn-btn" data-yn-val="si">Sí</button>
-          </div>
-          <div class="yn-count">
-            <label for="cajones-count">¿Cuántos?</label>
-            <input class="input count-input" id="cajones-count" inputmode="numeric" data-yn-count placeholder="1">
-          </div>
-        </div>
-      </div>
-
-      <!-- Herrajes y accesorios (sólo si hay puertas y/o cajones) -->
-      <div class="block" id="herraje-block">
-        <span class="block-label">Herrajes y accesorios</span>
-        <div class="card-grid two" id="herraje-grid">
-          <button type="button" class="opt" data-opt="herraje" data-val="Standard">
-            <span class="opt-t">Standard</span>
-            <span class="opt-s">Corredera telescópica reforzada · bisagra cazoleta tradicional</span>
-          </button>
-          <button type="button" class="opt" data-opt="herraje" data-val="Premium">
-            <span class="opt-t">Premium</span>
-            <span class="opt-s">Cierre suave · push-to-open</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Contanos -->
-      <div class="field" style="margin-top: 38px;">
-        <label for="f-mensaje">Contanos sobre el proyecto</label>
-        <p class="field-guide">Para darte un presupuesto más preciso, sumá lo que creas necesario: el espacio donde iría el proyecto, los plazos que esperás. Si elegiste MDF, decinos si lo querés liso o texturado; si elegiste Mixto, qué combinación de materiales imaginás. Y cualquier otra cosa que quieras compartirnos!</p>
-        <textarea class="input textarea" id="f-mensaje" name="mensaje" rows="4" placeholder="Escribí acá…"></textarea>
-      </div>
-
-      <!-- Tus datos -->
-      <div class="block" style="margin-top: 38px;">
-        <span class="block-label">Tus datos</span>
-        <div class="group">
-          <div class="field">
-            <label for="f-nombre">Nombre</label>
-            <input class="input" id="f-nombre" name="nombre" placeholder="Tu nombre">
-          </div>
-          <div class="field">
-            <label for="f-correo">Correo</label>
-            <input class="input" id="f-correo" name="correo" type="email" placeholder="vos@correo.com">
-          </div>
-          <div class="field">
-            <label for="f-ubicacion">Ubicación</label>
-            <input class="input" id="f-ubicacion" name="ubicacion" placeholder="Ciudad o barrio">
-          </div>
-          <div class="field">
-            <label for="f-celular">Celular</label>
-            <input class="input" id="f-celular" name="celular" type="tel" placeholder="+54 9 …">
-          </div>
-        </div>
-      </div>
-
-      <!-- Envío -->
-      <div class="actions">
-        <button type="submit" class="btn">Enviar consulta</button>
-        <span class="microcopy">Te responderemos a la brevedad.</span>
-      </div>
-
-    </div><!-- /config -->
-
-    <!-- Contacto -->
-    <div class="contact">
-      <span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-        Taller · Gonnet, La Plata
-      </span>
-      <span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92V21a1 1 0 0 1-1.1 1A19 19 0 0 1 2 4.1 1 1 0 0 1 3 3h4.1a1 1 0 0 1 1 .75l1 4a1 1 0 0 1-.3 1L7 10.5a16 16 0 0 0 6.5 6.5l1.7-1.7a1 1 0 0 1 1-.3l4 1a1 1 0 0 1 .8 1z"></path></svg>
-        +54 9 221 590 4082
-      </span>
-      <span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" stroke="none"></circle></svg>
-        @teca.muebles_
-      </span>
-    </div>
-
-  </form>
-
-  <aside class="encargo" aria-label="Tu encargo">
-    <span class="bp-eyebrow">— tu encargo —</span>
-    <div class="bp-frame" id="bp-frame">
-      <svg class="bp-ruler" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1">
-        <path d="M6 6 L6 58 L58 58 Z"></path>
-        <line x1="6" y1="20" x2="16" y2="20"></line>
-        <line x1="6" y1="34" x2="16" y2="34"></line>
-        <line x1="6" y1="48" x2="16" y2="48"></line>
-      </svg>
-      <svg class="bp-cross" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1">
-        <circle cx="22" cy="22" r="14"></circle>
-        <line x1="22" y1="4" x2="22" y2="40"></line>
-        <line x1="4" y1="22" x2="40" y2="22"></line>
-      </svg>
-
-      <div class="bp-stage">
-        <div class="bp-alto"><span class="bp-dim-lbl" id="bp-alto">alto</span></div>
-        <div class="bp-figure" id="bp-figure"></div>
-        <div class="bp-ancho"><span class="bp-dim-lbl" id="bp-ancho">ancho total</span></div>
-      </div>
-
-      <div class="bp-name" id="bp-name">tu proyecto</div>
-
-      <div class="bp-meta" id="bp-meta">
-        <div class="bp-finish" id="bp-finish">
-          <span class="bp-chip" id="bp-chip"></span>
-          <span id="bp-tone">—</span>
-        </div>
-        <div class="bp-row" id="bp-wood">—</div>
-      </div>
-    </div>
-    <div class="bp-tags">
-      <span class="bp-tag" id="tag-madera">Madera seleccionada</span>
-      <span class="bp-tag" id="tag-herraje">Herrajes de calidad</span>
-      <span class="bp-tag" id="tag-medidas">Medidas exactas</span>
-    </div>
-  </aside>
-
-  </div><!-- /layout -->
-
-  <!-- Gracias -->
-  <div class="thanks" id="thanks">
-    <h2 id="thanks-title">Gracias, te escribimos pronto.</h2>
-    <p>Tu consulta ya está lista. Tocá el botón para abrirla en WhatsApp y enviárnosla — nos llega al taller y la miramos con calma para responderte a la brevedad.</p>
-    <div class="thanks-actions">
-      <a class="btn" id="wa-btn" href="#" target="_blank" rel="noopener">Abrir WhatsApp</a>
-    </div>
-    <div class="plan-wrap" id="plan-wrap">
-      <img id="plan-img" class="plan-img" alt="Plano de tu presupuesto">
-      <p class="plan-hint" id="plan-hint">Mantené presionada la imagen y elegí <em>Guardar en fotos</em> — o usá el botón.</p>
-      <button type="button" class="link-btn" id="save-img-btn">Guardar imagen</button>
-    </div>
-    <p class="note">Si querés, sumá esta imagen del plano al chat de WhatsApp, junto con cualquier otra referencia que tengas<br>(foto del espacio donde va el proyecto, alguna idea que hayas visto en internet, etc).</p>
-    <button type="button" class="link-btn" id="reset-btn">← Cargar otra consulta</button>
+<div class="container">
+  <div class="page-header">
+    <div class="page-logo">TECA</div>
+    <div class="page-logo-sub">· Generador de Presupuestos ·</div>
   </div>
+  <div class="app">
+    <div class="tabs">
+      <button class="tab active" id="tab-btn-form" onclick="showTab('form')">Formulario</button>
+      <button class="tab" id="tab-btn-preview" onclick="showTab('preview')">Vista previa</button>
+    </div>
 
+    <div id="tab-form" class="panel active">
+      <div class="form-section">
+        <div class="fsec-title">Cliente</div>
+        <div class="frow c2">
+          <div class="field">
+            <label>Nombre del cliente</label>
+            <input type="text" id="clientName" placeholder="Ej: Luciana Conti" oninput="autoCapFirst(this)">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div class="field"><label>Día</label><input type="number" id="clientDay" min="1" max="31"></div>
+            <div class="field"><label>Mes</label>
+              <select id="clientMonth">
+                <option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option><option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option><option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
+              </select>
+            </div>
+            <div class="field"><label>Año</label><input type="text" id="clientYear"></div>
+          </div>
+        </div>
+        <div class="date-tag">📅 Fecha de hoy cargada automáticamente — podés editarla si necesitás</div>
+      </div>
+
+      <div class="form-section">
+        <div class="fsec-title">Proyecto</div>
+        <div class="frow c1">
+          <div class="field"><label>Nombre del proyecto</label><input type="text" id="projectName" placeholder="Ej: Ropero a medida" oninput="autoCapFirst(this)"></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="fsec-title">Módulos / Ítems</div>
+        <div id="modules-list"></div>
+        <button onclick="addModule()" style="display:block;width:100%;margin-top:6px;padding:11px 14px;background:#c17f4a;color:#fff9f2;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.12em;cursor:pointer;">+ Agregar módulo</button>
+      </div>
+
+      <div class="form-section">
+        <div class="fsec-title">Variantes de precio</div>
+        <div id="variants-list"></div>
+        <button onclick="addVariant()" style="display:block;width:100%;margin-top:6px;padding:11px 14px;background:#7a5030;color:#fff9f2;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.12em;cursor:pointer;">+ Agregar variante</button>
+      </div>
+
+      <div class="form-section">
+        <div class="fsec-title">Imágenes del proyecto</div>
+        <div class="img-upload-area" onclick="document.getElementById('imgInput').click()">
+          <div style="font-size:24px;margin-bottom:6px;">🖼</div>
+          <label style="font-size:11px;color:#8a6040;cursor:pointer;display:block;">Tocá para adjuntar fotos o renders<br><span style="font-size:10px;opacity:0.7;">Aparecerán al inicio del presupuesto</span></label>
+          <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImages(this)">
+        </div>
+        <div class="img-preview-grid" id="imgPreviewGrid"></div>
+      </div>
+
+      <div class="form-section">
+        <div class="fsec-title">Logística</div>
+        <div class="frow c2">
+          <div class="field">
+            <label>Envío</label>
+            <div style="display:flex;gap:10px;margin-top:2px;">
+              <button id="btn-envio-inc" onclick="toggleLog('envio','inc')" style="flex:1;padding:9px;font-size:11px;cursor:pointer;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;background:#2c3e2d;color:#e8dfc8;">Incluido</button>
+              <button id="btn-envio-sep" onclick="toggleLog('envio','sep')" style="flex:1;padding:9px;font-size:11px;cursor:pointer;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;background:#d4b896;color:#5c4030;">Aparte</button>
+            </div>
+            <div class="extra-field" id="extra-envio">
+              <div class="field" style="margin-top:8px;"><label>Valor aproximado ($)</label><input type="text" id="envio-val" placeholder="Ej: 15.000" oninput="fmtInput(this)"></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Instalación</label>
+            <div style="display:flex;gap:10px;margin-top:2px;">
+              <button id="btn-inst-inc" onclick="toggleLog('inst','inc')" style="flex:1;padding:9px;font-size:11px;cursor:pointer;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;background:#d4b896;color:#5c4030;">Incluida</button>
+              <button id="btn-inst-sep" onclick="toggleLog('inst','sep')" style="flex:1;padding:9px;font-size:11px;cursor:pointer;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;background:#2c3e2d;color:#e8dfc8;">Aparte</button>
+            </div>
+            <div class="extra-field show" id="extra-inst">
+              <div class="field" style="margin-top:8px;"><label>Valor aproximado ($)</label><input type="text" id="inst-val" placeholder="Ej: 30.000" oninput="fmtInput(this)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="generate()" style="display:block;width:100%;margin-top:4px;padding:14px;background:#2c3e2d;color:#e8dfc8;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.26em;text-transform:uppercase;cursor:pointer;">Generar presupuesto →</button>
+    </div>
+
+    <div id="tab-preview" class="panel">
+      <div id="preview-content">
+        <div class="empty-state"><div class="empty-big">TECA</div><p>Completá el formulario y generá el presupuesto</p></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button onclick="showTab('form')" style="flex:1;padding:12px;background:#c17f4a;color:#fff9f2;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;">← Modificar</button>
+        <button onclick="descargarPDF()" id="btn-pdf" style="flex:1;padding:12px;background:#2c3e2d;color:#e8dfc8;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;">Descargar PDF</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-(function () {
-  var state = { piece: null, material: null, herraje: null, tone: null, img: null, otherText: '',
-                seq: [], yn: { puertas: { on: false, n: 1 }, cajones: { on: false, n: 1 } } };
+let logState = { envio: 'inc', inst: 'sep' };
+let modCount = 0, varCount = 0;
+const letters = ['A','B','C','D','E','F'];
+const VARIANTES_DEFAULT = ['Línea Esencial', 'Línea Autor'];
+let imageDataURLs = [];
 
-  /* Proyectos que usan el flujo de aberturas (puertas / cajones) */
-  var ABERTURAS = ['Biblioteca', 'Escritorio', 'Rack TV', 'Mesa de luz', 'Vestidor', 'Otro', 'Cocina'];
-  function usaAberturas(piece) { return ABERTURAS.indexOf(piece) !== -1; }
+function setTodayDate() {
+  const h = new Date();
+  document.getElementById('clientDay').value = h.getDate();
+  document.getElementById('clientMonth').selectedIndex = h.getMonth();
+  document.getElementById('clientYear').value = h.getFullYear();
+}
+function capFirst(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+function autoCapFirst(el) {
+  const p = el.selectionStart; el.value = capFirst(el.value);
+  try { el.setSelectionRange(p,p); } catch(e){}
+}
+function formatNum(v) {
+  const d = v.replace(/\D/g,'');
+  return d ? d.replace(/\B(?=(\d{3})+(?!\d))/g,'.') : '';
+}
+function fmtInput(el) { el.value = formatNum(el.value); }
 
-  /* ---- Modelos de módulos (puertas / cajones / alacena) ---------------------
-     Cada grupo tiene 3 tamaños (ancho×alto en cm). El usuario toca un modelo
-     para sumar uno; el "−" resta. Los íconos comparten un viewBox 0 0 44 40 y
-     escalan el ancho del módulo según el tamaño elegido. ------------------- */
-  function mkSVG(inner, px) {
-    var h = (px * 40 / 44).toFixed(1);
-    return '<svg width="' + px + '" height="' + h + '" viewBox="0 0 44 40" fill="none" ' +
-      'stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">' +
-      inner + '</svg>';
-  }
-  /* módulo de 2 puertas */
-  function innerPuertas(w) {
-    var x = (44 - w) / 2;
-    return '<rect x="' + x + '" y="5" width="' + w + '" height="30"></rect>' +
-      '<line x1="22" y1="5" x2="22" y2="35"></line>' +
-      '<line x1="19" y1="17" x2="19" y2="23"></line>' +
-      '<line x1="25" y1="17" x2="25" y2="23"></line>';
-  }
-  /* cajonera (3 cajones) */
-  function innerCajones(w) {
-    var x = (44 - w) / 2, x2 = x + w;
-    return '<rect x="' + x + '" y="5" width="' + w + '" height="30"></rect>' +
-      '<line x1="' + x + '" y1="15" x2="' + x2 + '" y2="15"></line>' +
-      '<line x1="' + x + '" y1="25" x2="' + x2 + '" y2="25"></line>' +
-      '<line x1="19" y1="10" x2="25" y2="10"></line>' +
-      '<line x1="19" y1="20" x2="25" y2="20"></line>' +
-      '<line x1="19" y1="30" x2="25" y2="30"></line>';
-  }
-  /* alacena alta (2 puertas, tiradores abajo) */
-  function innerAlacena(w) {
-    var x = (44 - w) / 2;
-    return '<rect x="' + x + '" y="6" width="' + w + '" height="28"></rect>' +
-      '<line x1="22" y1="6" x2="22" y2="34"></line>' +
-      '<line x1="19" y1="27" x2="19" y2="31"></line>' +
-      '<line x1="25" y1="27" x2="25" y2="31"></line>';
-  }
-  /* alacena tipo baúl: una sola puerta horizontal que abre de abajo hacia arriba (tirador abajo) */
-  function innerBaul(w) {
-    var x = (44 - w) / 2, cx = 22, y = 11, h = 18;
-    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"></rect>' +
-      '<line x1="' + (cx - 5) + '" y1="' + (y + h - 3) + '" x2="' + (cx + 5) + '" y2="' + (y + h - 3) + '"></line>';
-  }
-  /* hueco: espacio libre, sin puerta ni cajón (interior punteado) — usado en el dibujo */
-  function innerHueco(w) {
-    var x = (44 - w) / 2;
-    return '<rect x="' + x + '" y="5" width="' + w + '" height="30"></rect>' +
-      '<rect x="' + (x + 4) + '" y="9" width="' + (w - 8) + '" height="22" stroke-dasharray="3 3"></rect>';
-  }
-  /* hueco para cocina (anafe + horno) */
-  function innerCocinaApp(w) {
-    var x = (44 - w) / 2, x2 = x + w;
-    return '<rect x="' + x + '" y="6" width="' + w + '" height="28"></rect>' +
-      '<line x1="' + x + '" y1="17" x2="' + x2 + '" y2="17"></line>' +
-      '<circle cx="16" cy="11.5" r="2"></circle><circle cx="28" cy="11.5" r="2"></circle>' +
-      '<line x1="14" y1="20" x2="30" y2="20"></line>' +
-      '<rect x="15" y="23" width="14" height="7"></rect>';
-  }
-  /* hueco para heladera (con fondo, alta — sin alacena encima) */
-  function innerHeladera() {
-    var bw = 20, x = (44 - bw) / 2, x2 = x + bw, y = 2, h = 36;
-    return '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + h + '" rx="1.5" fill="rgba(149,113,79,0.16)"></rect>' +
-      '<line x1="' + x + '" y1="' + (y + 12) + '" x2="' + x2 + '" y2="' + (y + 12) + '"></line>' +
-      '<line x1="' + (x2 - 4) + '" y1="' + (y + 5) + '" x2="' + (x2 - 4) + '" y2="' + (y + 9) + '"></line>' +
-      '<line x1="' + (x2 - 4) + '" y1="' + (y + 16) + '" x2="' + (x2 - 4) + '" y2="' + (y + 30) + '"></line>';
-  }
-  /* hueco para bacha de lavar: vista de frente — pileta arriba y, abajo, dos
-     puertas (cada una cuenta como una puerta chica en el presupuesto) */
-  function innerBacha(w) {
-    var x = (44 - w) / 2, x2 = x + w, cx = 22, top = 9, bot = 34, mid = 16;
-    return '<rect x="' + x + '" y="' + top + '" width="' + w + '" height="' + (bot - top) + '"></rect>' +
-      '<line x1="' + x + '" y1="' + mid + '" x2="' + x2 + '" y2="' + mid + '"></line>' +
-      '<rect x="' + (cx - 6) + '" y="' + (top + 2.5) + '" width="12" height="4.5" rx="1.5"></rect>' +
-      '<path d="M' + (cx + 7) + ' ' + (top + 2) + ' V' + (top - 3) + ' Q' + (cx + 7) + ' ' + (top - 5) + ' ' + (cx + 4) + ' ' + (top - 5) + '"></path>' +
-      '<line x1="' + cx + '" y1="' + mid + '" x2="' + cx + '" y2="' + bot + '"></line>' +
-      '<line x1="' + (cx - 3) + '" y1="' + (mid + 4) + '" x2="' + (cx - 3) + '" y2="' + (mid + 9) + '"></line>' +
-      '<line x1="' + (cx + 3) + '" y1="' + (mid + 4) + '" x2="' + (cx + 3) + '" y2="' + (mid + 9) + '"></line>';
-  }
-  var MODELOS = {
-    puertas: { label: 'Puertas', inner: innerPuertas,
-      items: [ { id: 'p60', size: '60×70', w: 34, cm: 60 }, { id: 'p50', size: '50×70', w: 28, cm: 50 }, { id: 'p40', size: '40×70', w: 22, cm: 40 } ] },
-    cajones: { label: 'Cajones', inner: innerCajones,
-      items: [ { id: 'c60', size: '60×70', w: 34, cm: 60 }, { id: 'c50', size: '50×70', w: 28, cm: 50 }, { id: 'c40', size: '40×70', w: 22, cm: 40 } ] },
-    hueco: { label: 'Objeto', inner: innerHueco,
-      items: [ { id: 'h-cocina', size: 'Cocina', w: 34, cm: 60, kind: 'cocina', inner: innerCocinaApp, measure: '≈ 60 cm' },
-               { id: 'h-heladera', size: 'Heladera', w: 34, cm: 70, kind: 'heladera', inner: innerHeladera, measure: '≈ 70 cm' },
-               { id: 'h-bacha', size: 'Bacha', w: 34, cm: 60, kind: 'bacha', inner: innerBacha, measure: '≈ 60 cm', doors: 2, doorCm: 30, note: '+ 2 puertas' } ] },
-    alacena: { label: 'Alacena', inner: innerAlacena,
-      items: [ { id: 'a60', size: '60×70', w: 34, cm: 60 }, { id: 'a50', size: '50×70', w: 28, cm: 50 }, { id: 'a40', size: '40×70', w: 22, cm: 40 },
-               { id: 'abaul', size: '60×70', w: 38, cm: 60, kind: 'baul', inner: innerBaul } ] }
-  };
-  /* grupos de la parte baja (corrida con mesada) y de arriba (alacena) */
-  var BASE_GRUPOS = ['puertas', 'cajones', 'hueco'];
-  var GRUPOS = ['puertas', 'cajones', 'hueco', 'alacena'];
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('tab-btn-'+t).classList.add('active');
+}
 
-  /* Modo de configuración de aberturas: 'models' = cuadraditos por tamaño (Cocina) ·
-     'yesno' = sí/no + cantidad (resto de proyectos con aberturas) · 'none' */
-  function aberturasMode(piece) {
-    if (piece === 'Cocina') return 'models';
-    if (usaAberturas(piece)) return 'yesno';
-    return 'none';
-  }
+function toggleLog(type, val) {
+  logState[type] = val;
+  const inc = document.getElementById('btn-'+type+'-inc');
+  const sep = document.getElementById('btn-'+type+'-sep');
+  if (val==='inc') { inc.style.background='#2c3e2d'; inc.style.color='#e8dfc8'; sep.style.background='#d4b896'; sep.style.color='#5c4030'; }
+  else { sep.style.background='#2c3e2d'; sep.style.color='#e8dfc8'; inc.style.background='#d4b896'; inc.style.color='#5c4030'; }
+  document.getElementById('extra-'+type).classList.toggle('show', val==='sep');
+}
 
-  function modItem(group, id) {
-    return MODELOS[group].items.filter(function (it) { return it.id === id; })[0];
-  }
-  /* Todos los módulos elegidos, juntando todos los tramos (modo models) */
-  function allSeq() {
-    return tramoRows().reduce(function (acc, r) { return acc.concat(r._seq || []); }, []);
-  }
-  function modSummary(group) {
-    if (aberturasMode(state.piece) === 'yesno' && (group === 'puertas' || group === 'cajones')) {
-      var y = state.yn[group];
-      return y.on ? ('Sí · ' + y.n) : 'No';
-    }
-    var seq = allSeq().filter(function (e) { return e.group === group; });
-    var parts = MODELOS[group].items
-      .filter(function (it) { return seq.some(function (e) { return e.id === it.id; }); })
-      .map(function (it) {
-        var n = seq.filter(function (e) { return e.id === it.id; }).length;
-        return n + '× ' + it.size;
-      });
-    return parts.length ? parts.join(', ') : '—';
-  }
-  /* Resumen de un grupo dentro de un solo tramo, con sus medidas (ancho×alto) */
-  function rowModSummary(seq, group) {
-    var sub = (seq || []).filter(function (e) { return e.group === group; });
-    if (!sub.length) return '';
-    var parts = MODELOS[group].items
-      .filter(function (it) { return sub.some(function (e) { return e.id === it.id; }); })
-      .map(function (it) {
-        var n = sub.filter(function (e) { return e.id === it.id; }).length;
-        var extra = it.measure || '';
-        if (it.doors) extra += (extra ? ' · ' : '') + it.doors + ' puertas de ≈' + it.doorCm + ' cm';
-        var lbl = it.size + (group === 'hueco' ? (extra ? ' (' + extra + ')' : '') : ' cm') + (it.kind === 'baul' ? ' (baúl)' : '');
-        return n + '× ' + lbl;
-      });
-    return parts.join(', ');
-  }
-  /* ¿El grupo tiene algo elegido? (para el resumen del plano) */
-  function groupActive(group) {
-    if (aberturasMode(state.piece) === 'yesno') {
-      return (group === 'puertas' || group === 'cajones') && state.yn[group].on;
-    }
-    return allSeq().some(function (e) { return e.group === group; });
-  }
-  /* Total de aberturas con herraje (excluye huecos), para mostrar/ocultar herrajes */
-  function totalAberturas() {
-    var mode = aberturasMode(state.piece);
-    if (mode === 'yesno') {
-      return (state.yn.puertas.on ? state.yn.puertas.n : 0) +
-             (state.yn.cajones.on ? state.yn.cajones.n : 0);
-    }
-    if (mode === 'models') {
-      return allSeq().reduce(function (n, e) {
-        if (e.group !== 'hueco') return n + 1;
-        if (e.kind === 'bacha') {
-          var it = modItem('hueco', e.id);
-          return n + (it && it.doors ? it.doors : 0);
-        }
-        return n;
-      }, 0);
-    }
-    return 0;
-  }
-
-  /* Proyectos con configuración propia (material restringido / terminaciones / sin herrajes) */
-  var PROJECT_CONFIG = {
-    'Mesa': {
-      herrajes: false,
-      singleTramo: true
-    },
-    'Rack TV': {
-      singleTramo: true
-    },
-    'Mesa de luz': {
-      singleTramo: true
-    },
-    'Respaldo': {
-      materials: ['Madera maciza'],
-      herrajes: false,
-      singleTramo: true,
-      noProf: true,
-      terminaciones: {
-        'Madera maciza': [
-          { n: 'Paraíso',   img: 'paraiso' },
-          { n: 'Kiri',      img: 'kiri' },
-          { n: 'Eucalipto', img: 'eucalipto' }
-        ]
-      }
-    }
-  };
-
-  /* Lista de terminaciones para un material, respetando override del proyecto */
-  function termList(mat) {
-    var cfg = PROJECT_CONFIG[state.piece];
-    if (cfg && cfg.terminaciones && cfg.terminaciones[mat]) return cfg.terminaciones[mat];
-    return TERMINACIONES[mat];
-  }
-
-  /* Modo de visibilidad de herrajes: 'never' | 'conditional' | 'always' */
-  function showsHerrajes(piece) {
-    var cfg = PROJECT_CONFIG[piece];
-    if (cfg && cfg.herrajes === false) return 'never';
-    if (usaAberturas(piece)) return 'conditional';
-    return 'always';
-  }
-
-  /* Número de WhatsApp del taller (solo dígitos, con código de país) */
-  var WHATSAPP = '5492215904082';
-
-  /* ---- Dibujos de cada proyecto (vista de plano, viewBox 0 0 220 150) ---- */
-  var S = '<svg viewBox="0 0 220 150" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">';
-  var E = '</svg>';
-
-  var NOTEPAD = S +
-    '<rect x="68" y="18" width="84" height="116"></rect>' +
-    '<circle cx="68" cy="34" r="5"></circle><circle cx="68" cy="54" r="5"></circle><circle cx="68" cy="74" r="5"></circle><circle cx="68" cy="94" r="5"></circle><circle cx="68" cy="114" r="5"></circle>' +
-    '<line x1="86" y1="40" x2="140" y2="40" stroke-dasharray="3 4"></line>' +
-    '<line x1="86" y1="58" x2="140" y2="58" stroke-dasharray="3 4"></line>' +
-    '<line x1="86" y1="100" x2="140" y2="100" stroke-dasharray="3 4"></line>' +
-    '<line x1="86" y1="118" x2="140" y2="118" stroke-dasharray="3 4"></line>' +
-    '<text x="113" y="96" font-family="Cormorant Garamond, serif" font-size="58" fill="currentColor" stroke="none" text-anchor="middle">?</text>' +
-    E;
-
-  var FIGS = {
-    'Cocina': S +
-      '<rect x="18" y="14" width="52" height="34"></rect><rect x="72" y="14" width="44" height="34"></rect><rect x="118" y="14" width="40" height="34"></rect>' +
-      '<line x1="41" y1="40" x2="47" y2="40"></line><line x1="91" y1="40" x2="97" y2="40"></line>' +
-      '<line x1="12" y1="74" x2="208" y2="74"></line><rect x="18" y="74" width="184" height="6"></rect>' +
-      '<rect x="30" y="76" width="30" height="3"></rect>' +
-      '<rect x="18" y="80" width="184" height="56"></rect>' +
-      '<line x1="78" y1="80" x2="78" y2="136"></line><line x1="140" y1="80" x2="140" y2="136"></line>' +
-      '<line x1="70" y1="92" x2="70" y2="106"></line><line x1="86" y1="92" x2="86" y2="106"></line>' +
-      '<line x1="132" y1="92" x2="132" y2="106"></line><line x1="148" y1="92" x2="148" y2="106"></line>' +
-      E,
-    'Mesa': S +
-      '<rect x="28" y="52" width="164" height="9"></rect>' +
-      '<line x1="46" y1="61" x2="46" y2="126"></line><line x1="52" y1="61" x2="52" y2="126"></line>' +
-      '<line x1="168" y1="61" x2="168" y2="126"></line><line x1="174" y1="61" x2="174" y2="126"></line>' +
-      '<line x1="68" y1="61" x2="68" y2="118"></line><line x1="152" y1="61" x2="152" y2="118"></line>' +
-      '<line x1="52" y1="72" x2="168" y2="72"></line>' +
-      E,
-    'Vestidor': S +
-      '<rect x="52" y="14" width="116" height="124"></rect><line x1="110" y1="14" x2="110" y2="138"></line>' +
-      '<line x1="64" y1="30" x2="100" y2="30"></line>' +
-      '<line x1="70" y1="30" x2="70" y2="70"></line><line x1="78" y1="30" x2="78" y2="72"></line><line x1="86" y1="30" x2="86" y2="68"></line><line x1="94" y1="30" x2="94" y2="71"></line>' +
-      '<line x1="58" y1="102" x2="104" y2="102"></line>' +
-      '<line x1="116" y1="40" x2="162" y2="40"></line><line x1="116" y1="66" x2="162" y2="66"></line><line x1="116" y1="92" x2="162" y2="92"></line><line x1="116" y1="118" x2="162" y2="118"></line>' +
-      '<line x1="104" y1="72" x2="104" y2="86"></line><line x1="116" y1="72" x2="116" y2="86"></line>' +
-      E,
-    'Rack TV': S +
-      '<rect x="66" y="14" width="88" height="50"></rect>' +
-      '<line x1="98" y1="64" x2="122" y2="64"></line><line x1="92" y1="72" x2="128" y2="72"></line>' +
-      '<rect x="24" y="80" width="172" height="42"></rect>' +
-      '<line x1="81" y1="80" x2="81" y2="122"></line><line x1="139" y1="80" x2="139" y2="122"></line>' +
-      '<line x1="48" y1="100" x2="58" y2="100"></line><line x1="105" y1="100" x2="115" y2="100"></line><line x1="162" y1="100" x2="172" y2="100"></line>' +
-      '<line x1="36" y1="122" x2="36" y2="132"></line><line x1="184" y1="122" x2="184" y2="132"></line>' +
-      E,
-    'Escritorio': S +
-      '<rect x="22" y="50" width="176" height="9"></rect>' +
-      '<rect x="30" y="59" width="52" height="72"></rect>' +
-      '<line x1="30" y1="83" x2="82" y2="83"></line><line x1="30" y1="107" x2="82" y2="107"></line>' +
-      '<line x1="48" y1="71" x2="64" y2="71"></line><line x1="48" y1="95" x2="64" y2="95"></line><line x1="48" y1="119" x2="64" y2="119"></line>' +
-      '<line x1="184" y1="59" x2="184" y2="131"></line><line x1="190" y1="59" x2="190" y2="131"></line>' +
-      E,
-    'Respaldo': S +
-      '<path d="M34 86 V42 Q34 24 52 24 H168 Q186 24 186 42 V86 Z"></path>' +
-      '<path d="M46 82 V46 Q46 34 58 34 H162 Q174 34 174 46 V82"></path>' +
-      '<rect x="52" y="62" width="52" height="26" rx="9"></rect>' +
-      '<rect x="116" y="62" width="52" height="26" rx="9"></rect>' +
-      '<rect x="28" y="88" width="164" height="18" rx="4"></rect>' +
-      '<rect x="28" y="106" width="164" height="20"></rect>' +
-      '<line x1="36" y1="126" x2="36" y2="136"></line><line x1="184" y1="126" x2="184" y2="136"></line>' +
-      E,
-    'Mesa de luz': S +
-      '<path d="M96 16 h28 l6 16 h-40 z"></path><line x1="110" y1="32" x2="110" y2="52"></line>' +
-      '<rect x="60" y="52" width="100" height="56"></rect>' +
-      '<line x1="60" y1="80" x2="160" y2="80"></line>' +
-      '<circle cx="110" cy="66" r="2"></circle><circle cx="110" cy="94" r="2"></circle>' +
-      '<line x1="70" y1="108" x2="66" y2="134"></line><line x1="150" y1="108" x2="154" y2="134"></line>' +
-      E,
-    'Exterior': S +
-      '<line x1="48" y1="40" x2="172" y2="40"></line><line x1="48" y1="53" x2="172" y2="53"></line><line x1="48" y1="66" x2="172" y2="66"></line>' +
-      '<line x1="50" y1="38" x2="50" y2="84"></line><line x1="170" y1="38" x2="170" y2="84"></line>' +
-      '<rect x="42" y="80" width="136" height="10"></rect>' +
-      '<line x1="52" y1="90" x2="52" y2="128"></line><line x1="168" y1="90" x2="168" y2="128"></line>' +
-      '<line x1="52" y1="128" x2="46" y2="134"></line><line x1="168" y1="128" x2="174" y2="134"></line>' +
-      E,
-    'Biblioteca': S +
-      '<rect x="48" y="12" width="124" height="126"></rect>' +
-      '<line x1="48" y1="48" x2="172" y2="48"></line><line x1="48" y1="84" x2="172" y2="84"></line><line x1="48" y1="120" x2="172" y2="120"></line>' +
-      '<line x1="56" y1="22" x2="56" y2="48"></line><line x1="61" y1="20" x2="61" y2="48"></line><line x1="66" y1="24" x2="66" y2="48"></line><rect x="72" y="30" width="13" height="18"></rect><line x1="92" y1="20" x2="92" y2="48"></line><line x1="97" y1="23" x2="97" y2="48"></line><line x1="150" y1="22" x2="150" y2="48"></line><line x1="155" y1="20" x2="155" y2="48"></line><line x1="160" y1="25" x2="160" y2="48"></line>' +
-      '<line x1="56" y1="58" x2="56" y2="84"></line><line x1="61" y1="56" x2="61" y2="84"></line><rect x="67" y="62" width="13" height="22"></rect><line x1="88" y1="58" x2="88" y2="84"></line><line x1="93" y1="60" x2="93" y2="84"></line><line x1="98" y1="58" x2="98" y2="84"></line><line x1="148" y1="59" x2="148" y2="84"></line><line x1="153" y1="57" x2="153" y2="84"></line><line x1="158" y1="60" x2="158" y2="84"></line><line x1="163" y1="58" x2="163" y2="84"></line>' +
-      '<line x1="56" y1="94" x2="56" y2="120"></line><line x1="61" y1="92" x2="61" y2="120"></line><line x1="66" y1="96" x2="66" y2="120"></line><line x1="71" y1="93" x2="71" y2="120"></line><rect x="78" y="100" width="14" height="20"></rect><line x1="150" y1="94" x2="150" y2="120"></line><line x1="155" y1="92" x2="155" y2="120"></line><line x1="160" y1="95" x2="160" y2="120"></line>' +
-      E,
-    'Otro': NOTEPAD
-  };
-
-  /* ---- Dibujo compuesto: arma el mueble con los módulos elegidos ----
-     Cada tramo es una banda: bajo mesada (puertas / cajones / huecos) con
-     mesada arriba, y las alacenas colgando encima. Los tramos se apilan uno
-     debajo del otro y el viewBox crece en alto. ------------------------- */
-  function cabinet(x, y, w, h, type, kind) {
-    x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
-    var cx = Math.round(x + w / 2);
-    var s = '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"></rect>';
-    if (kind === 'baul') {
-      /* puerta horizontal que abre hacia arriba: sólo el tirador abajo */
-      s += '<line x1="' + (cx - 7) + '" y1="' + (y + h - 5) + '" x2="' + (cx + 7) + '" y2="' + (y + h - 5) + '"></line>';
-      return s;
-    }
-    if (type === 'hueco') {
-      var ix = x + 5, iy = y + 5, iw = w - 10, ih = h - 10;
-      if (iw > 4 && ih > 4) {
-        s += '<rect x="' + ix + '" y="' + iy + '" width="' + iw + '" height="' + ih + '" stroke-dasharray="4 4"></rect>';
-      }
-      return s;
-    }
-    if (type === 'cajones') {
-      var d1 = Math.round(y + h / 3), d2 = Math.round(y + 2 * h / 3);
-      s += '<line x1="' + x + '" y1="' + d1 + '" x2="' + (x + w) + '" y2="' + d1 + '"></line>';
-      s += '<line x1="' + x + '" y1="' + d2 + '" x2="' + (x + w) + '" y2="' + d2 + '"></line>';
-      [y + h / 6, y + h / 2, y + 5 * h / 6].forEach(function (hy) {
-        hy = Math.round(hy);
-        s += '<line x1="' + (cx - 5) + '" y1="' + hy + '" x2="' + (cx + 5) + '" y2="' + hy + '"></line>';
-      });
-    } else {
-      s += '<line x1="' + cx + '" y1="' + y + '" x2="' + cx + '" y2="' + (y + h) + '"></line>';
-      var hy = type === 'alacena' ? Math.round(y + h - 9) : Math.round(y + h / 2);
-      s += '<line x1="' + (cx - 3) + '" y1="' + (hy - 4) + '" x2="' + (cx - 3) + '" y2="' + (hy + 4) + '"></line>';
-      s += '<line x1="' + (cx + 3) + '" y1="' + (hy - 4) + '" x2="' + (cx + 3) + '" y2="' + (hy + 4) + '"></line>';
-    }
-    return s;
-  }
-  function rowSvg(mods, top, h, maxW, withTop) {
-    var gap = 3;
-    var totalCm = mods.reduce(function (s, m) { return s + m.cm; }, 0);
-    if (!totalCm) return '';
-    var scale = Math.min((maxW - gap * (mods.length - 1)) / totalCm, 1.5);
-    var totalPx = totalCm * scale + gap * (mods.length - 1);
-    var x = (220 - totalPx) / 2, lx = x, out = '';
-    mods.forEach(function (m) {
-      var w = m.cm * scale;
-      out += cabinet(x, top, w, h, m.type, m.kind);
-      x += w + gap;
-    });
-    if (withTop) {
-      var ty = Math.round(top - 4);
-      out += '<line x1="' + Math.round(lx - 4) + '" y1="' + ty +
-             '" x2="' + Math.round(x - gap + 4) + '" y2="' + ty + '"></line>';
-    }
-    return out;
-  }
-  function svgWrap(h, inner) {
-    return '<svg viewBox="0 0 220 ' + Math.round(h) + '" fill="none" stroke="currentColor" ' +
-      'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
-  }
-  var ACC = '#95714F';
-  /* electrodomésticos dibujados dentro de un hueco (escala libre) */
-  function appliance(x, y, w, h, kind) {
-    x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
-    var cx = Math.round(x + w / 2), s;
-    if (kind === 'heladera') {
-      s = '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="1.5" fill="rgb(228,214,196)"></rect>';
-      var fy = Math.round(y + h * 0.26);
-      s += '<line x1="' + x + '" y1="' + fy + '" x2="' + (x + w) + '" y2="' + fy + '"></line>';
-      var hx = x + w - 5;
-      s += '<line x1="' + hx + '" y1="' + (y + 6) + '" x2="' + hx + '" y2="' + (fy - 4) + '"></line>';
-      s += '<line x1="' + hx + '" y1="' + (fy + 4) + '" x2="' + hx + '" y2="' + (y + h - 6) + '"></line>';
-      return s;
-    }
-    if (kind === 'cocina') {
-      s = '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"></rect>';
-      var cookY = Math.round(y + h * 0.30);
-      s += '<line x1="' + x + '" y1="' + cookY + '" x2="' + (x + w) + '" y2="' + cookY + '"></line>';
-      var by = Math.round(y + h * 0.16), br = Math.max(1.4, w * 0.05);
-      s += '<circle cx="' + (cx - Math.round(w * 0.2)) + '" cy="' + by + '" r="' + br.toFixed(1) + '"></circle>';
-      s += '<circle cx="' + (cx + Math.round(w * 0.2)) + '" cy="' + by + '" r="' + br.toFixed(1) + '"></circle>';
-      var ow = Math.min(w - 8, Math.round(w * 0.6)), ox = Math.round(cx - ow / 2), oy = cookY + 4, oh = Math.max(5, (y + h) - oy - 4);
-      s += '<rect x="' + ox + '" y="' + oy + '" width="' + ow + '" height="' + oh + '"></rect>';
-      s += '<line x1="' + ox + '" y1="' + (cookY + 2) + '" x2="' + (ox + ow) + '" y2="' + (cookY + 2) + '"></line>';
-      return s;
-    }
-    /* bacha de lavar: bajo mesada normal con sólo la canilla asomando sobre la
-       mesada — el dibujo de la pileta se entiende por la canilla, no se dibuja */
-    s = '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"></rect>';
-    var cLine = y - 4;
-    s += '<line x1="' + Math.round(x - 4) + '" y1="' + cLine + '" x2="' + Math.round(x + w + 4) + '" y2="' + cLine + '"></line>';
-    s += '<line x1="' + cx + '" y1="' + (y + 4) + '" x2="' + cx + '" y2="' + (y + h - 4) + '"></line>';
-    /* dos tiradores: deja claro que abajo hay dos puertas */
-    s += '<line x1="' + (cx - 5) + '" y1="' + (y + 7) + '" x2="' + (cx - 5) + '" y2="' + (y + 14) + '"></line>';
-    s += '<line x1="' + (cx + 5) + '" y1="' + (y + 7) + '" x2="' + (cx + 5) + '" y2="' + (y + 14) + '"></line>';
-    var fh = 8, frx = cx, fTop = cLine - fh;
-    s += '<line x1="' + frx + '" y1="' + cLine + '" x2="' + frx + '" y2="' + fTop + '"></line>';
-    s += '<path d="M' + frx + ' ' + fTop + ' q0 -2.5 3 -2.5 q4 0 4 4"></path>';
-    return s;
-  }
-  function runWidth(mods, maxW) {
-    var gap = 3, totalCm = mods.reduce(function (s, m) { return s + m.cm; }, 0);
-    if (!totalCm) return 0;
-    var scale = Math.min((maxW - gap * (mods.length - 1)) / totalCm, 1.5);
-    return totalCm * scale + gap * (mods.length - 1);
-  }
-  function counterLine(x0, x1, baseTop) {
-    var ty = Math.round(baseTop - 4);
-    return '<line x1="' + Math.round(x0 - 4) + '" y1="' + ty + '" x2="' + Math.round(x1 + 4) + '" y2="' + ty + '"></line>';
-  }
-  /* corrida bajo mesada: huecos como electrodomésticos, heladera a toda altura */
-  /* layout de la corrida base: posiciones y span de la heladera */
-  function baseLayout(mods, maxW) {
-    var gap = 3, totalCm = mods.reduce(function (s, m) { return s + m.cm; }, 0);
-    if (!totalCm) return null;
-    var scale = Math.min((maxW - gap * (mods.length - 1)) / totalCm, 1.5);
-    var totalPx = totalCm * scale + gap * (mods.length - 1);
-    var x0 = (220 - totalPx) / 2, x = x0, spans = [], hel = null;
-    mods.forEach(function (m) {
-      var w = m.cm * scale, left = x, right = x + w;
-      spans.push({ m: m, left: left, right: right, w: w });
-      if (m.kind === 'heladera') hel = [left, right];
-      x = right + gap;
-    });
-    return { gap: gap, scale: scale, totalPx: totalPx, x0: x0, x1: x0 + totalPx, spans: spans, hel: hel };
-  }
-  function baseRunSvg(layout, geo, reserveUp) {
-    if (!layout) return '';
-    var out = '', heladeraTop = reserveUp ? geo.upTop : geo.baseTop;
-    var segStart = null, segEnd = null;
-    layout.spans.forEach(function (sp) {
-      var m = sp.m, left = sp.left, right = sp.right, w = sp.w;
-      if (m.kind === 'heladera') {
-        out += appliance(left, heladeraTop, w, (geo.baseTop + geo.baseH) - heladeraTop, 'heladera');
-        if (segStart !== null) { out += counterLine(segStart, segEnd, geo.baseTop); segStart = null; }
-      } else {
-        if (m.type === 'hueco') out += appliance(left, geo.baseTop, w, geo.baseH, m.kind);
-        else out += cabinet(left, geo.baseTop, w, geo.baseH, m.type, m.kind);
-        if (segStart === null) segStart = left;
-        segEnd = right;
-      }
-    });
-    if (segStart !== null) out += counterLine(segStart, segEnd, geo.baseTop);
-    return out;
-  }
-  /* regiones horizontales donde pueden ir alacenas: el ancho de la corrida base
-     menos la columna que ocupa la heladera (ese espacio no se puede utilizar). */
-  function upperRegions(layout, maxW) {
-    if (!layout) return [[(220 - maxW) / 2, (220 + maxW) / 2]];
-    if (!layout.hel) return [[layout.x0, layout.x1]];
-    var regs = [];
-    var L = [layout.x0, layout.hel[0] - layout.gap];
-    var R = [layout.hel[1] + layout.gap, layout.x1];
-    if (L[1] - L[0] > 6) regs.push(L);
-    if (R[1] - R[0] > 6) regs.push(R);
-    return regs;
-  }
-  /* coloca las alacenas dentro de las regiones disponibles, alineadas a la
-     corrida base y sin superponerse nunca con la heladera */
-  function uppersSvg(uppers, regions, top, h) {
-    if (!uppers.length || !regions.length) return '';
-    var gap = 3, totalCm = uppers.reduce(function (s, m) { return s + m.cm; }, 0);
-    var availPx = regions.reduce(function (s, r) { return s + (r[1] - r[0]); }, 0);
-    var scale = Math.min((availPx - gap * Math.max(0, uppers.length - 1)) / totalCm, 1.5);
-    if (!(scale > 0)) scale = availPx / totalCm;
-    var out = '', ri = 0, x = regions[0][0];
-    uppers.forEach(function (m) {
-      var w = m.cm * scale;
-      while (ri < regions.length - 1 && x + w > regions[ri][1] + 0.5) {
-        ri++; x = regions[ri][0];
-      }
-      out += cabinet(x, top, w, h, m.type, m.kind);
-      x += w + gap;
-    });
-    return out;
-  }
-  /* una banda (un tramo): alacena arriba, bajo mesada abajo. Devuelve geometría.
-     Si hay heladera, se reserva la zona de alacena arriba aunque no haya alacenas,
-     para que la heladera ocupe la altura total, y las alacenas no la pisan. */
-  function bandSvg(base, uppers, top) {
-    var maxW = 192, inner = '', geo;
-    var hasUp = uppers.length > 0, hasBase = base.length > 0;
-    var hasHel = base.some(function (m) { return m.kind === 'heladera'; });
-    var reserveUp = hasUp || hasHel;
-    if (reserveUp && hasBase) geo = { upTop: top + 4, upH: 26, baseTop: top + 50, baseH: 48, h: 102, reserveUp: true };
-    else if (hasBase) geo = { upTop: null, upH: 0, baseTop: top + 8, baseH: 52, h: 68, reserveUp: false };
-    else geo = { upTop: top + 8, upH: 48, baseTop: null, baseH: 0, h: 60, reserveUp: false };
-    var layout = hasBase ? baseLayout(base, maxW) : null;
-    if (hasUp) {
-      if (hasBase) inner += uppersSvg(uppers, upperRegions(layout, maxW), geo.upTop, geo.upH);
-      else inner += rowSvg(uppers, geo.upTop, geo.upH, maxW, false);
-    }
-    if (hasBase) inner += baseRunSvg(layout, geo, geo.reserveUp);
-    geo.bw = hasBase ? layout.totalPx : runWidth(uppers, maxW);
-    geo.svg = inner;
-    return geo;
-  }
-  /* líneas de medida (alto a la izquierda, ancho abajo) para una banda/tramo */
-  function bandDims(geo, m) {
-    var contentTop = (geo.upTop != null) ? geo.upTop : geo.baseTop;
-    var contentBot = (geo.baseTop != null) ? (geo.baseTop + geo.baseH) : (geo.upTop + geo.upH);
-    var x0 = (220 - geo.bw) / 2, x1 = x0 + geo.bw;
-    var s = '';
-    /* alto, vertical a la izquierda */
-    var ax = Math.round(x0 - 11); if (ax < 9) ax = 9;
-    s += '<line x1="' + ax + '" y1="' + contentTop + '" x2="' + ax + '" y2="' + contentBot + '" stroke="' + ACC + '"></line>';
-    s += '<line x1="' + (ax - 3) + '" y1="' + contentTop + '" x2="' + (ax + 3) + '" y2="' + contentTop + '" stroke="' + ACC + '"></line>';
-    s += '<line x1="' + (ax - 3) + '" y1="' + contentBot + '" x2="' + (ax + 3) + '" y2="' + contentBot + '" stroke="' + ACC + '"></line>';
-    var my = Math.round((contentTop + contentBot) / 2), atxt = m.alto ? (m.alto + ' cm') : 'alto';
-    s += '<text x="' + (ax - 4) + '" y="' + my + '" fill="' + ACC + '" stroke="none" font-family="Jost, sans-serif" font-size="8" letter-spacing="0.4" text-anchor="middle" transform="rotate(-90 ' + (ax - 4) + ' ' + my + ')">' + atxt + '</text>';
-    /* ancho, horizontal abajo */
-    var by = Math.round(contentBot + 12);
-    s += '<line x1="' + Math.round(x0) + '" y1="' + by + '" x2="' + Math.round(x1) + '" y2="' + by + '" stroke="' + ACC + '"></line>';
-    s += '<line x1="' + Math.round(x0) + '" y1="' + (by - 3) + '" x2="' + Math.round(x0) + '" y2="' + (by + 3) + '" stroke="' + ACC + '"></line>';
-    s += '<line x1="' + Math.round(x1) + '" y1="' + (by - 3) + '" x2="' + Math.round(x1) + '" y2="' + (by + 3) + '" stroke="' + ACC + '"></line>';
-    var wtxt = m.ancho ? (m.ancho + ' cm') : 'ancho';
-    if (m.prof) wtxt += '  · prof ' + m.prof;
-    s += '<text x="110" y="' + (by + 9) + '" fill="' + ACC + '" stroke="none" font-family="Jost, sans-serif" font-size="8" letter-spacing="0.4" text-anchor="middle">' + wtxt + '</text>';
-    return s;
-  }
-  function tramoMods(r) {
-    var seq = r._seq || [];
-    return {
-      base: seq.filter(function (e) { return BASE_GRUPOS.indexOf(e.group) !== -1; })
-               .map(function (e) { return { type: e.group, cm: e.cm, kind: e.kind }; }),
-      uppers: seq.filter(function (e) { return e.group === 'alacena'; })
-                 .map(function (e) { return { type: e.group, cm: e.cm, kind: e.kind }; })
-    };
-  }
-  /* Sólo Cocina arma el mueble; cada tramo es una banda apilada con su propia medida */
-  function buildComposite() {
-    if (aberturasMode(state.piece) !== 'models') return null;
-    var bands = [];
-    tramoRows().forEach(function (r) {
-      var mods = tramoMods(r);
-      if (!mods.base.length && !mods.uppers.length) return;
-      bands.push({
-        base: mods.base, uppers: mods.uppers,
-        m: {
-          ancho: clean(r.querySelector('.t-ancho').value),
-          alto:  clean(r.querySelector('.t-alto').value),
-          prof:  clean(r.querySelector('.t-prof').value)
-        }
-      });
-    });
-    if (!bands.length) return null;
-    var y = 12, inner = '';
-    bands.forEach(function (b) {
-      var geo = bandSvg(b.base, b.uppers, y);
-      inner += geo.svg;
-      inner += bandDims(geo, b.m);
-      y += geo.h + 30;
-    });
-    return svgWrap(y, inner);
-  }
-
-  /* ---- Terminaciones según el material (swatches reales en /swatches) ---- */
-  var TERMINACIONES = {
-    'Madera maciza': [
-      { n: 'Paraíso',  img: 'paraiso' },
-      { n: 'Petiribí', img: 'petiribi' },
-      { n: 'Kiri',     img: 'kiri' }
-    ],
-    'MDF pintado': [
-      { n: 'Blanco Natural', img: 'blanco-natural' },
-      { n: 'Roble',          img: 'roble' },
-      { n: 'Verde Salvia',   img: 'verde-salvia' },
-      { n: 'Gris Piedra',    img: 'gris-piedra' },
-      { n: 'Negro Mate',     img: 'negro-mate' },
-      { n: 'Terracota',      img: 'terracota' },
-      { n: 'Otro',           img: '' }
-    ],
-    'Melamina': [
-      { n: 'Paraíso',      img: 'paraiso' },
-      { n: 'Camelia',      img: 'camelia' },
-      { n: 'Verde Safari', img: 'verde-safari' },
-      { n: 'Gris Tapir',   img: 'gris-tapir' },
-      { n: 'Blanco',       img: 'blanco' }
-    ],
-    'Mixto': null
-  };
-
-  var pieceGrid = document.getElementById('piece-grid');
-  var config       = document.getElementById('config');
-  var herrajeBlock = document.getElementById('herraje-block');
-  var materialGrid = document.getElementById('material-grid');
-  var herrajeGrid  = document.getElementById('herraje-grid');
-  var toneRow   = document.getElementById('tone-row');
-  var toneNote  = document.getElementById('tone-note');
-  var toneOther = document.getElementById('tone-other');
-  function toneLabel() {
-    if (state.tone === 'Otro') return state.otherText ? state.otherText : 'Otro (a definir)';
-    return state.tone;
-  }
-
-  var bpFigure = document.getElementById('bp-figure');
-  var bpName   = document.getElementById('bp-name');
-  var bpAlto   = document.getElementById('bp-alto');
-  var bpAncho  = document.getElementById('bp-ancho');
-  var bpFinish = document.getElementById('bp-finish');
-  var bpChip   = document.getElementById('bp-chip');
-  var bpTone   = document.getElementById('bp-tone');
-  var bpWood   = document.getElementById('bp-wood');
-  var tagMadera  = document.getElementById('tag-madera');
-  var tagHerraje = document.getElementById('tag-herraje');
-  var tagMedidas = document.getElementById('tag-medidas');
-
-  var tramosWrap  = document.getElementById('tramos');
-  var addTramoBtn = document.getElementById('add-tramo');
-
-  function tramoRows() {
-    return Array.prototype.slice.call(tramosWrap.querySelectorAll('.tramo'));
-  }
-  function getTramos() {
-    return tramoRows().map(function (row) {
-      return {
-        ancho: clean(row.querySelector('.t-ancho').value),
-        alto:  clean(row.querySelector('.t-alto').value),
-        prof:  clean(row.querySelector('.t-prof').value)
-      };
-    });
-  }
-  function filledTramos() {
-    return getTramos().filter(function (t) { return t.ancho || t.alto || t.prof; });
-  }
-  function relabelTramos() {
-    var rows = tramoRows();
-    var solo = rows.length <= 1;
-    rows.forEach(function (row, i) {
-      row.classList.toggle('solo', solo);
-      var n = row.querySelector('.tramo-n');
-      if (n) n.textContent = 'Tramo ' + (i + 1);
-    });
-  }
-  function addTramo() {
-    var row = document.createElement('div');
-    row.className = 'tramo';
-    row._seq = [];
-    row.innerHTML =
-      '<div class="tramo-head">' +
-        '<span class="tramo-n"></span>' +
-        '<button type="button" class="tramo-x" aria-label="Quitar tramo"><span class="x">×</span> quitar</button>' +
-      '</div>' +
-      '<div class="measures">' +
-        '<input class="input t-ancho" inputmode="numeric" placeholder="ancho">' +
-        '<input class="input t-alto" inputmode="numeric" placeholder="alto">' +
-        '<input class="input t-prof" inputmode="numeric" placeholder="profundidad">' +
-      '</div>' +
-      '<div class="tramo-modules" hidden></div>';
-    tramosWrap.appendChild(row);
-    row.querySelector('.tramo-x').addEventListener('click', function () {
-      row.parentNode.removeChild(row);
-      relabelTramos();
-      render();
-    });
-    Array.prototype.forEach.call(row.querySelectorAll('.measures .input'), function (el) {
-      el.addEventListener('input', function () {
-        if (el.classList.contains('t-ancho')) syncTramoModulesRow(row);
-        render();
-      });
-    });
-    syncTramoModulesRow(row);
-    relabelTramos();
-    return row;
-  }
-  function resetTramos() {
-    tramosWrap.innerHTML = '';
-    addTramo();
-    relabelTramos();
-  }
-  /* Proyectos de un solo tramo (Mesa, Respaldo): sin botón "agregar tramo" */
-  function applyTramoMode(piece) {
-    var cfg = PROJECT_CONFIG[piece];
-    var single = !!(cfg && cfg.singleTramo);
-    if (single) {
-      tramoRows().slice(1).forEach(function (r) { r.parentNode.removeChild(r); });
-      relabelTramos();
-    }
-    addTramoBtn.style.display = single ? 'none' : '';
-    var guide = document.getElementById('tramo-guide');
-    if (guide) guide.style.display = single ? 'none' : '';
-    var noProf = !!(cfg && cfg.noProf);
-    tramoRows().forEach(function (r) {
-      var m = r.querySelector('.measures');
-      if (m) m.classList.toggle('no-prof', noProf);
-      if (noProf) { var p = r.querySelector('.t-prof'); if (p) p.value = ''; }
-    });
-  }
-  addTramoBtn.addEventListener('click', function () {
-    var row = addTramo();
-    render();
-    var first = row.querySelector('.input');
-    if (first) first.focus();
+function handleImages(input) {
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => { imageDataURLs.push(e.target.result); renderImgPreviews(); };
+    reader.readAsDataURL(file);
   });
+  input.value = '';
+}
+function renderImgPreviews() {
+  document.getElementById('imgPreviewGrid').innerHTML = imageDataURLs.map((src,i) => `
+    <div class="img-thumb"><img src="${src}"><button class="img-thumb-rm" onclick="removeImg(${i})">×</button></div>`).join('');
+}
+function removeImg(i) { imageDataURLs.splice(i,1); renderImgPreviews(); }
 
-  /* ---- Límite de módulos según el ancho del tramo --------------------------
-     Cada tramo tiene un ancho (cm). Los módulos de la corrida base (puertas,
-     cajones, huecos / objetos) no pueden sumar más ancho que ese número; las
-     alacenas tampoco, descontando la columna de la heladera (que no admite
-     alacena encima). Sin ancho cargado no se limita: sólo se avisa. */
-  function tramoAnchoCm(row) {
-    var n = parseFloat(clean(row.querySelector('.t-ancho').value));
-    return (isNaN(n) || n <= 0) ? 0 : n;
-  }
-  function scopeOf(group) { return group === 'alacena' ? 'upper' : 'base'; }
-  function heladeraCm(row) {
-    return (row._seq || []).reduce(function (s, e) {
-      return s + (e.kind === 'heladera' ? (e.cm || 0) : 0);
-    }, 0);
-  }
-  function usedCm(row, scope) {
-    return (row._seq || []).reduce(function (s, e) {
-      return s + (scopeOf(e.group) === scope ? (e.cm || 0) : 0);
-    }, 0);
-  }
-  function limitCm(row, scope) {
-    var ancho = tramoAnchoCm(row);
-    if (!ancho) return Infinity;
-    return scope === 'upper' ? Math.max(0, ancho - heladeraCm(row)) : ancho;
-  }
-  function fitsCm(row, scope, cm) {
-    var lim = limitCm(row, scope);
-    return lim === Infinity ? true : (usedCm(row, scope) + cm <= lim + 0.001);
-  }
-  function flashCap(row, scope) {
-    var el = row.querySelector('.tramo-cap .cap-row[data-cap="' + scope + '"]');
-    if (!el) el = row.querySelector('.tramo-cap');
-    if (!el) return;
-    el.classList.remove('flash');
-    void el.offsetWidth; /* reinicia la animación */
-    el.classList.add('flash');
-  }
-  function updateTramoCap(row) {
-    var cap = row.querySelector('.tramo-cap');
-    if (!cap) return;
-    var ancho = tramoAnchoCm(row);
-    cap.classList.toggle('no-ancho', !ancho);
-    ['base', 'upper'].forEach(function (scope) {
-      var el = cap.querySelector('.cap-row[data-cap="' + scope + '"]');
-      if (!el) return;
-      var lim = limitCm(row, scope);
-      if (lim === Infinity) lim = 0;
-      var used = usedCm(row, scope);
-      var rem = lim - used;
-      var pct = lim > 0 ? Math.min(100, Math.round(used / lim * 100)) : (used > 0 ? 100 : 0);
-      el.querySelector('.cap-fill').style.width = pct + '%';
-      el.classList.toggle('is-over', rem < 0);
-      el.classList.toggle('is-done', rem === 0 && used > 0);
-      var num = el.querySelector('.cap-num');
-      if (scope === 'upper' && lim === 0 && ancho) num.textContent = 'sin lugar';
-      else if (rem < 0)    num.textContent = 'te pasaste ' + Math.abs(rem) + ' cm';
-      else if (rem === 0 && used > 0) num.textContent = 'completo';
-      else                 num.textContent = 'quedan ' + rem + ' cm';
+function addModule() {
+  modCount++;
+  const id='mod'+modCount, n=modCount;
+  const div=document.createElement('div'); div.id=id; div.className='mod-block';
+  div.innerHTML=`
+    <div class="block-header"><span class="mod-label">Módulo 0${n}</span><button class="rm-btn" onclick="document.getElementById('${id}').remove()">×</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="field"><label>Nombre</label><input type="text" data-key="name" placeholder="Ej: Cuerpo principal" oninput="autoCapFirst(this)"></div>
+      <div class="field"><label>Medidas — Ancho · Alto · Prof. (cm)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+          <input type="text" data-key="w" placeholder="Ancho"><input type="text" data-key="h" placeholder="Alto"><input type="text" data-key="d" placeholder="Prof.">
+        </div>
+      </div>
+    </div>
+    <div class="field"><label>Especificaciones (una por línea)</label><textarea data-key="specs" placeholder="MDF blanco 18mm&#10;4 cajones telescópicos&#10;Bisagra cierre suave"></textarea></div>`;
+  document.getElementById('modules-list').appendChild(div);
+}
+
+function addVariant() {
+  varCount++;
+  const id='var'+varCount, n=varCount;
+  const defName=VARIANTES_DEFAULT[n-1]||'';
+  const div=document.createElement('div'); div.id=id; div.className='var-block';
+  div.innerHTML=`
+    <div class="block-header"><span class="var-label-form">Opción ${letters[n-1]||n}</span><button class="rm-btn" onclick="document.getElementById('${id}').remove()">×</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="field"><label>Nombre</label><input type="text" data-key="name" value="${defName}" oninput="autoCapFirst(this)"></div>
+      <div class="field"><label>Precio ($)</label><input type="text" data-key="price" placeholder="1.210.000" oninput="fmtInput(this)"></div>
+    </div>
+    <div class="field" style="margin-bottom:10px;"><label>Descripción</label><textarea data-key="desc" placeholder="Estructura en MDF blanco 18mm&#10;Puertas lacadas blancas"></textarea></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="feat${n}" data-key="featured" style="width:auto;cursor:pointer;">
+      <label for="feat${n}" style="font-size:10px;color:#3d2510;cursor:pointer;">Destacar esta variante (fondo oscuro)</label>
+    </div>`;
+  document.getElementById('variants-list').appendChild(div);
+}
+
+const svgTruck=`<svg width="26" height="20" viewBox="0 0 28 22" fill="none"><rect x="1" y="5" width="17" height="12" rx="1.5" stroke="#4a6b4b" stroke-width="1.2" fill="none"/><path d="M18 9h5.5l2.5 4v4H18V9z" stroke="#8a6040" stroke-width="1.2" fill="none" stroke-linejoin="round"/><circle cx="6" cy="18" r="2" stroke="#4a6b4b" stroke-width="1.2" fill="none"/><circle cx="21" cy="18" r="2" stroke="#8a6040" stroke-width="1.2" fill="none"/><line x1="1" y1="8" x2="18" y2="8" stroke="#4a6b4b" stroke-width="0.8" stroke-dasharray="2 1.5"/></svg>`;
+const svgTool=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M14.5 3.5c-2.2-.4-4.5.8-5.3 3-.6 1.6-.2 3.3.8 4.5L3 18a1.5 1.5 0 002.1 2.1l7-7c1.2 1 2.9 1.4 4.5.8 2.2-.8 3.4-3.1 3-5.3l-2.5 2.5-1.5-.5-.5-1.5 2.5-2.5z" stroke="#8a6040" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>`;
+
+function getModules() {
+  return Array.from(document.querySelectorAll('#modules-list .mod-block')).map((el,i)=>{
+    const name=capFirst(el.querySelector('[data-key="name"]').value);
+    const w=el.querySelector('[data-key="w"]').value, h=el.querySelector('[data-key="h"]').value, d=el.querySelector('[data-key="d"]').value;
+    const dim=[w,h,d].filter(Boolean).join(' × ');
+    const specs=el.querySelector('textarea').value.split('\n').filter(s=>s.trim());
+    return {num:i+1,name,dim,specs};
+  }).filter(m=>m.name);
+}
+function getVariants() {
+  return Array.from(document.querySelectorAll('#variants-list .var-block')).map((el,i)=>{
+    const name=capFirst(el.querySelector('[data-key="name"]').value);
+    const price=el.querySelector('[data-key="price"]').value;
+    const desc=el.querySelector('[data-key="desc"]').value;
+    const featured=el.querySelector('[data-key="featured"]').checked;
+    return {i,name,price,desc,featured};
+  }).filter(v=>v.name);
+}
+
+function buildDoc(client,fullDate,project,mods,vars,envioInc,instInc,envioVal,instVal,lowest) {
+  const colCount=mods.length===1?1:mods.length===2?2:3;
+  const galleryHTML=imageDataURLs.length?`
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(imageDataURLs.length,2)},1fr);gap:8px;margin-bottom:20px;">
+      ${imageDataURLs.map(src=>`<img src="${src}" style="width:100%;max-height:220px;object-fit:cover;border-radius:3px;border:0.5px solid #d4b896;display:block;">`).join('')}
+    </div>`:'';
+  const modsHTML=mods.map(m=>`
+    <div class="icard">
+      <div class="inum">0${m.num} · ${m.name}</div><div class="iname">${m.name}</div>
+      ${m.dim?`<div class="idim">${m.dim} cm</div>`:''}
+      <div class="sdivl"></div>
+      ${m.specs.map(s=>`<div class="spc"><span class="sdot">·</span>${capFirst(s)}</div>`).join('')}
+    </div>`).join('');
+  const varsHTML=vars.map((v,i)=>`
+    <div class="vcard ${v.featured?'feat':''}">
+      <div style="flex:1;"><div class="vtag">Opción ${letters[i]||i+1}</div><div class="vname">${v.name}</div>${v.desc?`<div class="vdesc">${v.desc}</div>`:''}</div>
+      <div style="text-align:right;flex-shrink:0;"><div class="vprice-lbl">Valor final</div><div class="vprice">$ ${v.price}</div></div>
+    </div>`).join('');
+  return `<div class="preview-wrap"><div class="doc">
+    <div class="hero">
+      <div><div class="logo-name">T E C A</div><div class="logo-sub">— Carpintería de Diseño —</div></div>
+      <div class="cblock"><div class="clbl">Preparado para</div><div class="cname">${client}</div><div class="cmeta">${fullDate}</div></div>
+    </div>
+    <div class="abar"></div>
+    <div class="dbody">
+      <div class="srow"><span class="slbl">Propuesta · Mobiliario</span><div class="sline"></div></div>
+      <div class="ptitle">${project}</div>
+      ${galleryHTML}
+      ${mods.length?`<div class="srow"><span class="slbl">Especificaciones</span><div class="sline"></div></div><div class="igrid" style="grid-template-columns:repeat(${colCount},1fr);">${modsHTML}</div>`:''}
+      ${vars.length?`<div class="srow"><span class="slbl">Variantes · Precio</span><div class="sline"></div></div><div style="margin-bottom:18px;">${varsHTML}</div>`:''}
+      <div class="srow"><span class="slbl">Logística</span><div class="sline"></div></div>
+      <div class="lrow">
+        <div class="lcard ${envioInc?'inc':'sep'}"><div style="flex-shrink:0;margin-top:1px;">${svgTruck}</div><div><div class="ltitle">Envío ${envioInc?'incluido':'aparte'}</div><div class="ldesc">${envioInc?'El traslado hasta el domicilio está incluido en el precio del proyecto.':'El traslado se presupuesta por separado.'}</div>${!envioInc&&envioVal?`<div class="lval">Valor aprox. $ ${envioVal}</div>`:''}</div></div>
+        <div class="lcard ${instInc?'inc':'sep'}"><div style="flex-shrink:0;margin-top:1px;">${svgTool}</div><div><div class="ltitle">Instalación ${instInc?'incluida':'aparte'}</div><div class="ldesc">${instInc?'La colocación está incluida en el precio del proyecto.':'La colocación se presupuesta por separado según las condiciones del lugar.'}</div>${!instInc&&instVal?`<div class="lval">Valor aprox. $ ${instVal}</div>`:''}</div></div>
+      </div>
+    </div>
+    <div class="bot">
+      <div><div class="tlbl">${vars.length>1?'Valor desde':'Valor del proyecto'}</div><div class="tval">$ ${lowest||'—'}</div><div class="tnote">Precio Final<br>Valor sujeto a modificaciones según el replanteo en obra.</div></div>
+      <div><div class="vlbl">Validez del presupuesto</div><div class="vtxt">10 días hábiles<br>desde el ${fullDate}</div></div>
+    </div>
+  </div></div>`;
+}
+
+function generate() {
+  const client=capFirst(document.getElementById('clientName').value||'Cliente');
+  const day=document.getElementById('clientDay').value;
+  const month=document.getElementById('clientMonth').value;
+  const year=document.getElementById('clientYear').value;
+  const fullDate=`${day} de ${month} de ${year}`;
+  const project=capFirst(document.getElementById('projectName').value||'Proyecto a medida');
+  const mods=getModules(), vars=getVariants();
+  const envioInc=logState.envio==='inc', instInc=logState.inst==='inc';
+  const envioVal=document.getElementById('envio-val').value;
+  const instVal=document.getElementById('inst-val').value;
+  const lowest=vars.length?vars.reduce((a,b)=>{
+    const pa=parseInt((a.price||'0').replace(/\./g,''))||0;
+    const pb=parseInt((b.price||'0').replace(/\./g,''))||0;
+    return pa<=pb?a:b;
+  }).price:'';
+  document.getElementById('preview-content').innerHTML=buildDoc(client,fullDate,project,mods,vars,envioInc,instInc,envioVal,instVal,lowest);
+  showTab('preview');
+}
+
+async function descargarPDF() {
+  const btn = document.getElementById('btn-pdf');
+  btn.textContent = 'Generando...';
+  btn.style.opacity = '0.7';
+  btn.style.pointerEvents = 'none';
+  const el = document.getElementById('preview-content');
+  try {
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#f0ebe3',
+      windowWidth: el.scrollWidth,
+      windowHeight: el.scrollHeight
     });
-  }
-
-  /* Clicks en los cuadraditos de cada tramo (delegado) */
-  tramosWrap.addEventListener('click', function (e) {
-    var btn = e.target.closest('.tramo-modules .model');
-    if (!btn) return;
-    var row = btn.closest('.tramo');
-    var group = btn.closest('.tmod').getAttribute('data-group');
-    var id = btn.getAttribute('data-id');
-    if (!row._seq) row._seq = [];
-    if (e.target.closest('[data-minus]')) {
-      for (var i = row._seq.length - 1; i >= 0; i--) {
-        if (row._seq[i].group === group && row._seq[i].id === id) { row._seq.splice(i, 1); break; }
-      }
-    } else {
-      var it = modItem(group, id);
-      if (it && !fitsCm(row, scopeOf(group), it.cm)) { flashCap(row, scopeOf(group)); return; }
-      row._seq.push({ group: group, id: id, size: it.size, cm: it.cm, kind: it.kind });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const pxPerMm = canvas.width / pageW;
+    const pageHeightPx = pageH * pxPerMm;
+    let yOffset = 0, pageNum = 0;
+    while (yOffset < canvas.height) {
+      if (pageNum > 0) pdf.addPage();
+      const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
+      const tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width = canvas.width;
+      tmpCanvas.height = sliceH;
+      tmpCanvas.getContext('2d').drawImage(canvas, 0, yOffset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      const imgData = tmpCanvas.toDataURL('image/jpeg', 0.92);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageW, sliceH / pxPerMm);
+      yOffset += pageHeightPx;
+      pageNum++;
     }
-    syncTramoModulesRow(row);
-    updateHerrajeVisibility();
-    drawNext = true;
-    render();
-  });
-
-  function clean(v) { return (v || '').toString().trim(); }
-
-  /* Efecto “se va dibujando en el plano”: traza los contornos del SVG al elegir
-     un proyecto (o al sumar un módulo), respetando prefers-reduced-motion. */
-  var drawNext = false;
-  function animateDraw(svg) {
-    if (!svg) return;
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var els = svg.querySelectorAll('path, line, rect, circle, ellipse, polyline, polygon');
-    var idx = 0;
-    Array.prototype.forEach.call(els, function (el) {
-      var len = 0;
-      try { len = el.getTotalLength(); } catch (e) { len = 0; }
-      if (!len || !isFinite(len)) return;
-      var hasFill = el.getAttribute('fill') && el.getAttribute('fill') !== 'none';
-      var delay = Math.min(idx * 40, 900);
-      idx++;
-      el.style.transition = 'none';
-      el.style.strokeDasharray = len + ' ' + len;
-      el.style.strokeDashoffset = String(len);
-      if (hasFill) el.style.fillOpacity = '0';
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          el.style.transition = 'stroke-dashoffset 560ms cubic-bezier(0.22,0.61,0.36,1) ' + delay + 'ms' +
-            (hasFill ? ', fill-opacity 360ms ease-out ' + (delay + 300) + 'ms' : '');
-          el.style.strokeDashoffset = '0';
-          if (hasFill) el.style.fillOpacity = '1';
-        });
-      });
-      setTimeout(function () {
-        el.style.transition = '';
-        el.style.strokeDasharray = '';
-        el.style.strokeDashoffset = '';
-        if (hasFill) el.style.fillOpacity = '';
-      }, delay + 760);
-    });
+    const clientName = document.getElementById('clientName').value || 'presupuesto';
+    pdf.save(`TECA_${clientName.replace(/\s+/g,'_')}.pdf`);
+  } catch(e) {
+    alert('Error al generar el PDF. Intentá de nuevo.');
   }
+  btn.textContent = 'Descargar PDF';
+  btn.style.opacity = '1';
+  btn.style.pointerEvents = 'auto';
+}
 
-  function render() {
-    var tramos = getTramos();
-    var first = tramos[0] || { ancho: '', alto: '', prof: '' };
-    var alto = first.alto, prof = first.prof;
-    var totalAncho = tramos.reduce(function (sum, t) {
-      var n = parseFloat(t.ancho);
-      return sum + (isNaN(n) ? 0 : n);
-    }, 0);
-    var multi = tramos.length > 1;
-
-    /* figura + nombre */
-    var comp = state.piece ? buildComposite() : null;
-    var inSvgDims = !!comp; /* Cocina con módulos: las medidas van dentro del dibujo, por tramo */
-    if (state.piece) {
-      bpFigure.innerHTML = comp || FIGS[state.piece] || NOTEPAD;
-      bpFigure.classList.remove('is-empty');
-      bpName.textContent = state.piece;
-      bpName.classList.remove('is-empty');
-    } else {
-      bpFigure.innerHTML = NOTEPAD;
-      bpFigure.classList.add('is-empty');
-      bpName.textContent = 'tu proyecto';
-      bpName.classList.add('is-empty');
-    }
-    if (drawNext) { animateDraw(bpFigure.querySelector('svg')); drawNext = false; }
-
-    /* medidas sobre el dibujo — ocultas cuando el dibujo ya trae una línea por tramo */
-    var altoBox = bpAlto.parentElement, anchoBox = bpAncho.parentElement;
-    if (inSvgDims) {
-      altoBox.style.display = 'none';
-      anchoBox.style.display = 'none';
-    } else {
-      altoBox.style.display = '';
-      anchoBox.style.display = '';
-      bpAlto.textContent = alto ? alto + ' cm' : 'alto';
-      var anchoTxt;
-      if (first.ancho && prof) {
-        anchoTxt = first.ancho + ' cm  ·  prof ' + prof;
-      } else if (first.ancho) {
-        anchoTxt = first.ancho + ' cm';
-      } else if (prof) {
-        anchoTxt = 'prof ' + prof + ' cm';
-      } else {
-        anchoTxt = 'ancho total';
-      }
-      bpAncho.textContent = anchoTxt;
-    }
-
-    /* terminación */
-    if (state.tone) {
-      bpFinish.classList.remove('is-empty');
-      if (state.img) {
-        bpChip.style.backgroundImage = 'url("swatches/' + state.img + '.png")';
-        bpChip.classList.remove('is-otro');
-      } else {
-        bpChip.style.backgroundImage = 'none';
-        bpChip.classList.add('is-otro');
-      }
-      bpTone.textContent = toneLabel();
-    } else {
-      bpFinish.classList.add('is-empty');
-    }
-
-    /* material */
-    if (state.material) {
-      bpWood.classList.remove('is-empty');
-      bpWood.textContent = state.material;
-    } else {
-      bpWood.classList.add('is-empty');
-    }
-
-    /* tags */
-    tagMadera.classList.toggle('on', !!state.material);
-    tagHerraje.classList.toggle('on', !!state.herraje);
-    var ft = filledTramos();
-    var medidasOk = ft.length > 0 && ft.every(function (t) { return t.ancho && t.alto && t.prof; });
-    tagMedidas.classList.toggle('on', medidasOk);
-  }
-
-  function setTerminaciones(mat) {
-    state.tone = null;
-    state.img = null;
-    state.otherText = '';
-    toneOther.hidden = true;
-    toneOther.value = '';
-    toneRow.innerHTML = '';
-    var list = termList(mat);
-    if (mat === 'Mixto') {
-      toneRow.style.display = 'none';
-      toneNote.style.display = '';
-      toneNote.textContent = 'Para un proyecto mixto, contanos la combinación de materiales y terminaciones en las observaciones de abajo.';
-    } else if (list) {
-      toneRow.style.display = '';
-      toneNote.style.display = 'none';
-      list.forEach(function (t) {
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'tone';
-        b.setAttribute('data-tone', t.n);
-        b.setAttribute('data-img', t.img);
-        var chip = t.img
-          ? '<span class="chip" style="background-image:url(&quot;swatches/' + t.img + '.png&quot;)"></span>'
-          : '<span class="chip is-otro"></span>';
-        b.innerHTML = chip + '<span class="name">' + t.n + '</span>';
-        toneRow.appendChild(b);
-      });
-    } else {
-      toneRow.style.display = '';
-      toneNote.style.display = '';
-      toneNote.textContent = 'Elegí un material para ver las terminaciones.';
-    }
-    render();
-  }
-
-  function selectIn(container, btn, cls) {
-    Array.prototype.forEach.call(container.querySelectorAll('.' + cls), function (el) {
-      el.classList.remove('is-selected');
-    });
-    btn.classList.add('is-selected');
-  }
-
-  function clearHerraje() {
-    state.herraje = null;
-    Array.prototype.forEach.call(herrajeGrid.querySelectorAll('.opt'), function (el) {
-      el.classList.remove('is-selected');
-    });
-  }
-
-  /* ---- Módulos por tramo (cuadraditos) — sólo Cocina ---- */
-  function buildTramoModules(box) {
-    box.innerHTML = '';
-    var cap = document.createElement('div');
-    cap.className = 'tramo-cap no-ancho';
-    cap.innerHTML =
-      '<div class="cap-empty">Ingresá el ancho del tramo y te mostramos cuántos módulos entran.</div>' +
-      '<div class="cap-row" data-cap="base"><span class="cap-name">Bajo mesada</span>' +
-        '<span class="cap-bar"><span class="cap-fill"></span></span><span class="cap-num"></span></div>' +
-      '<div class="cap-row" data-cap="upper"><span class="cap-name">Alacena</span>' +
-        '<span class="cap-bar"><span class="cap-fill"></span></span><span class="cap-num"></span></div>' +
-      '<p class="cap-foot">(Si sobran o faltan algunos centímetros, contanos en Observaciones qué te gustaría hacer con ese espacio.)</p>';
-    box.appendChild(cap);
-    GRUPOS.forEach(function (g) {
-      var def = MODELOS[g];
-      var wrap = document.createElement('div');
-      wrap.className = 'tmod';
-      wrap.setAttribute('data-group', g);
-      var hint = g === 'hueco' ? ' <span class="lbl-hint">(a modo simbólico)</span>' : '';
-      wrap.innerHTML = '<span class="tmod-label">' + def.label + hint + '</span><div class="model-row"></div>';
-      var mr = wrap.querySelector('.model-row');
-      def.items.forEach(function (it) {
-        var innerFn = it.inner || def.inner;
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'model';
-        b.setAttribute('data-id', it.id);
-        b.innerHTML =
-          '<span class="model-minus" data-minus aria-label="Quitar uno">−</span>' +
-          '<span class="model-fig">' + mkSVG(innerFn(it.w), 42) + '</span>' +
-          '<span class="model-size">' + it.size + '</span>' +
-          (it.measure ? '<span class="model-measure">' + it.measure + '</span>' : '') +
-          (it.note ? '<span class="model-note">' + it.note + '</span>' : '') +
-          '<span class="model-count">×0</span>';
-        mr.appendChild(b);
-      });
-      box.appendChild(wrap);
-    });
-  }
-  function syncModelRowEl(row, group) {
-    var wrap = row.querySelector('.tmod[data-group="' + group + '"]');
-    if (!wrap) return;
-    var seq = row._seq || [];
-    var scope = scopeOf(group);
-    Array.prototype.forEach.call(wrap.querySelectorAll('.model'), function (b) {
-      var id = b.getAttribute('data-id');
-      var n = seq.filter(function (e) { return e.group === group && e.id === id; }).length;
-      b.classList.toggle('on', n > 0);
-      b.querySelector('.model-count').textContent = '×' + n;
-      var it = modItem(group, id);
-      b.classList.toggle('is-full', !!it && !fitsCm(row, scope, it.cm));
-    });
-  }
-  function syncTramoModulesRow(row) {
-    var box = row.querySelector('.tramo-modules');
-    if (!box) return;
-    if (aberturasMode(state.piece) === 'models') {
-      if (!box.getAttribute('data-built')) { buildTramoModules(box); box.setAttribute('data-built', '1'); }
-      box.hidden = false;
-      GRUPOS.forEach(function (g) { syncModelRowEl(row, g); });
-      updateTramoCap(row);
-    } else {
-      box.hidden = true;
-    }
-  }
-  function syncTramoModules() {
-    tramoRows().forEach(syncTramoModulesRow);
-  }
-
-  /* ---- Controles Sí / No + cantidad (proyectos que no son Cocina) ---- */
-  function syncYn(group) {
-    var block = document.querySelector('.proj-field[data-yn="' + group + '"]');
-    if (!block) return;
-    var y = state.yn[group];
-    Array.prototype.forEach.call(block.querySelectorAll('.yn-btn'), function (b) {
-      var isSi = b.getAttribute('data-yn-val') === 'si';
-      b.classList.toggle('is-selected', isSi === y.on);
-    });
-    block.querySelector('.yn-count').classList.toggle('show', y.on);
-    var input = block.querySelector('[data-yn-count]');
-    if (document.activeElement !== input) input.value = y.on ? y.n : '';
-  }
-  function bindYn(group) {
-    var block = document.querySelector('.proj-field[data-yn="' + group + '"]');
-    if (!block) return;
-    block.addEventListener('click', function (e) {
-      var b = e.target.closest('.yn-btn');
-      if (!b) return;
-      var on = b.getAttribute('data-yn-val') === 'si';
-      state.yn[group].on = on;
-      if (on && (!state.yn[group].n || state.yn[group].n < 1)) state.yn[group].n = 1;
-      syncYn(group);
-      updateHerrajeVisibility();
-      render();
-      if (on) { var inp = block.querySelector('[data-yn-count]'); if (inp) inp.focus(); }
-    });
-    var input = block.querySelector('[data-yn-count]');
-    input.addEventListener('input', function () {
-      var n = parseInt(input.value, 10);
-      state.yn[group].n = (isNaN(n) || n < 1) ? 1 : n;
-      render();
-    });
-  }
-
-  function resetAberturas() {
-    tramoRows().forEach(function (r) { r._seq = []; });
-    state.yn = { puertas: { on: false, n: 1 }, cajones: { on: false, n: 1 } };
-    syncTramoModules();
-    syncYn('puertas');
-    syncYn('cajones');
-  }
-
-  /* Herrajes: nunca / sólo con aberturas / siempre, según el proyecto */
-  function updateHerrajeVisibility() {
-    if (!state.piece) { herrajeBlock.hidden = true; return; }
-    var mode = showsHerrajes(state.piece);
-    if (mode === 'never') { herrajeBlock.hidden = true; clearHerraje(); return; }
-    if (mode === 'conditional') {
-      var show = totalAberturas() > 0;
-      herrajeBlock.hidden = !show;
-      if (!show) clearHerraje();
-    } else {
-      herrajeBlock.hidden = false;
-    }
-  }
-
-  /* Muestra/oculta los campos propios del proyecto elegido */
-  function applyProjectFields(piece) {
-    resetAberturas();
-    Array.prototype.forEach.call(document.querySelectorAll('.proj-field'), function (el) {
-      var match = el.getAttribute('data-proj').split(',').indexOf(piece) !== -1;
-      el.hidden = !match;
-    });
-    updateHerrajeVisibility();
-  }
-
-  ['puertas', 'cajones'].forEach(bindYn);
-
-  /* Filtra materiales y terminaciones, y aplica los campos propios del proyecto */
-  function applyProject(piece) {
-    var cfg = PROJECT_CONFIG[piece];
-    var allowed = cfg && cfg.materials;
-    Array.prototype.forEach.call(materialGrid.querySelectorAll('.opt'), function (btn) {
-      var ok = !allowed || allowed.indexOf(btn.getAttribute('data-val')) !== -1;
-      btn.hidden = !ok;
-      if (!ok) btn.classList.remove('is-selected');
-    });
-    if (state.material && allowed && allowed.indexOf(state.material) === -1) state.material = null;
-    setTerminaciones(state.material);   /* reconstruye con override del proyecto + render */
-    applyTramoMode(piece);              /* uno o varios tramos */
-    applyProjectFields(piece);          /* módulos por tramo / sí-no + herrajes */
-  }
-
-  pieceGrid.addEventListener('click', function (e) {
-    var btn = e.target.closest('.piece');
-    if (!btn) return;
-    selectIn(pieceGrid, btn, 'piece');
-    state.piece = btn.getAttribute('data-piece');
-    config.hidden = false;
-    applyProject(state.piece);
-    drawNext = true;
-    render();
-  });
-
-  function bindOpt(container, key) {
-    container.addEventListener('click', function (e) {
-      var btn = e.target.closest('.opt');
-      if (!btn) return;
-      selectIn(container, btn, 'opt');
-      state[key] = btn.getAttribute('data-val');
-      if (key === 'material') {
-        setTerminaciones(state.material);
-      } else {
-        render();
-      }
-    });
-  }
-  bindOpt(materialGrid, 'material');
-  bindOpt(herrajeGrid, 'herraje');
-
-  toneRow.addEventListener('click', function (e) {
-    var btn = e.target.closest('.tone');
-    if (!btn) return;
-    selectIn(toneRow, btn, 'tone');
-    state.tone = btn.getAttribute('data-tone');
-    state.img  = btn.getAttribute('data-img');
-    if (state.tone === 'Otro') {
-      toneOther.hidden = false;
-      toneOther.value = state.otherText || '';
-      toneOther.focus();
-    } else {
-      toneOther.hidden = true;
-    }
-    render();
-  });
-  toneOther.addEventListener('input', function () {
-    state.otherText = toneOther.value.trim();
-    render();
-  });
-
-  resetTramos();
-
-  var form   = document.getElementById('presupuesto');
-  var layout = document.getElementById('layout');
-  var thanks = document.getElementById('thanks');
-  var thanksTitle = document.getElementById('thanks-title');
-  var mastheadTitle = document.getElementById('masthead-title');
-  var mastheadSubs  = document.querySelectorAll('.masthead-sub');
-
-  function getVal(id) { return (document.getElementById(id).value || '').trim(); }
-
-  /* ---- Imagen descargable del plano (mismo lenguaje que el panel) ---- */
-  function svgToImage(svg) {
-    return new Promise(function (res, rej) {
-      var im = new Image();
-      im.onload = function () { res(im); };
-      im.onerror = rej;
-      im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    });
-  }
-  function loadImg(src) {
-    return new Promise(function (res, rej) {
-      var im = new Image();
-      im.onload = function () { res(im); };
-      im.onerror = rej;
-      im.src = src;
-    });
-  }
-  function ls(ctx, v) { if ('letterSpacing' in ctx) ctx.letterSpacing = v; }
-
-  async function buildPlanCanvas() {
-    var INK = '#2E2218', SOFT = '#5A4634', MUTE = '#8C7B68', ACCENT = '#95714F';
-    var HAIR = 'rgba(46,34,24,0.16)', BG = '#EADED0';
-    var scale = 2, W = 520, H = 700;
-
-    try {
-      await document.fonts.load('400 30px "Cinzel"');
-      await document.fonts.load('300 13px "Jost"');
-      await document.fonts.load('400 21px "Cormorant Garamond"');
-      await document.fonts.ready;
-    } catch (e) {}
-
-    var canvas = document.createElement('canvas');
-    canvas.width = W * scale; canvas.height = H * scale;
-    var ctx = canvas.getContext('2d');
-    ctx.scale(scale, scale);
-    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = HAIR; ctx.lineWidth = 1;
-    ctx.strokeRect(24.5, 24.5, W - 49, H - 49);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-
-    /* wordmark */
-    ctx.fillStyle = INK;
-    ctx.font = '400 30px "Cinzel", serif';
-    ls(ctx, '8px');
-    ctx.fillText('TECA', W / 2 + 4, 74);
-    ls(ctx, '0px');
-
-    /* eyebrow */
-    ctx.fillStyle = MUTE;
-    ctx.font = 'italic 300 13px "Jost", sans-serif';
-    ctx.fillText('— tu encargo —', W / 2, 98);
-
-    /* figura */
-    var fig = (buildComposite() || FIGS[state.piece] || NOTEPAD);
-    var vbH = 150, mvb = fig.match(/viewBox="0 0 220 (\d+)"/);
-    if (mvb) vbH = parseInt(mvb[1], 10);
-    var boxW = 320, boxH = 212, vbW = 220;
-    var sc = Math.min(boxW / vbW, boxH / vbH);
-    var dw = vbW * sc, dh = vbH * sc;
-    var dx = (W - dw) / 2, dy = 122 + (boxH - dh) / 2;
-    fig = fig.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="' + Math.round(dw) + '" height="' + Math.round(dh) + '" ');
-    fig = fig.split('currentColor').join(state.piece ? INK : 'rgba(46,34,24,0.4)');
-    try {
-      var figImg = await svgToImage(fig);
-      ctx.drawImage(figImg, dx, dy, dw, dh);
-    } catch (e) {}
-
-    /* nombre del proyecto */
-    ctx.fillStyle = state.piece ? INK : MUTE;
-    ctx.font = '400 15px "Jost", sans-serif';
-    ls(ctx, '3px');
-    ctx.fillText((state.piece || 'TU PROYECTO').toUpperCase(), W / 2, 374);
-    ls(ctx, '0px');
-
-    /* medidas (uno o varios tramos) */
-    function planTramoStr(t) {
-      var p = [];
-      if (t.alto) p.push('alto ' + t.alto);
-      if (t.ancho) p.push('ancho ' + t.ancho);
-      if (t.prof) p.push('prof ' + t.prof);
-      return p.join('   ·   ');
-    }
-    var ftramos = filledTramos();
-    var y = 400;
-    ctx.fillStyle = ACCENT;
-    ls(ctx, '1px');
-    if (ftramos.length === 1) {
-      ctx.font = '400 12px "Jost", sans-serif';
-      ctx.fillText(planTramoStr(ftramos[0]) + '   cm', W / 2, y);
-      y = 430;
-    } else if (ftramos.length > 1) {
-      y = 396;
-      ftramos.forEach(function (t, i) {
-        ctx.font = '400 11px "Jost", sans-serif';
-        ctx.fillText('Tramo ' + (i + 1) + ':   ' + (planTramoStr(t) || '—') + '   cm', W / 2, y);
-        y += 17;
-      });
-      y += 11;
-    } else {
-      y = 430;
-    }
-    ls(ctx, '0px');
-
-    /* divisor */
-    ctx.strokeStyle = HAIR; ctx.beginPath();
-    ctx.moveTo(W / 2 - 90, y); ctx.lineTo(W / 2 + 90, y); ctx.stroke();
-
-    /* terminación: chip + nombre */
-    var ty = y + 42;
-    if (state.tone) {
-      ctx.font = '400 21px "Cormorant Garamond", serif';
-      var toneTxt = toneLabel();
-      var tw = ctx.measureText(toneTxt).width;
-      var r = 11, gap = 10, total = r * 2 + gap + tw, sx = W / 2 - total / 2, cy = ty - 7;
-      if (state.img) {
-        try {
-          var sw = await loadImg('swatches/' + state.img + '.png');
-          ctx.save();
-          ctx.beginPath(); ctx.arc(sx + r, cy, r, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
-          ctx.drawImage(sw, sx, cy - r, r * 2, r * 2);
-          ctx.restore();
-          ctx.strokeStyle = HAIR; ctx.beginPath(); ctx.arc(sx + r, cy, r, 0, Math.PI * 2); ctx.stroke();
-        } catch (e) {}
-      } else {
-        ctx.strokeStyle = MUTE; ctx.setLineDash([3, 3]);
-        ctx.beginPath(); ctx.arc(sx + r, cy, r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-      }
-      ctx.fillStyle = INK; ctx.textAlign = 'left';
-      ctx.fillText(toneTxt, sx + r * 2 + gap, ty);
-      ctx.textAlign = 'center';
-    }
-
-    /* material */
-    var matY = ty + (state.tone ? 32 : 4);
-    if (state.material) {
-      ctx.fillStyle = SOFT;
-      ctx.font = '400 12px "Jost", sans-serif';
-      ls(ctx, '1.5px');
-      ctx.fillText(state.material.toUpperCase(), W / 2, matY);
-      ls(ctx, '0px');
-    }
-    /* herrajes */
-    if (state.herraje) {
-      ctx.fillStyle = MUTE;
-      ctx.font = 'italic 300 13px "Jost", sans-serif';
-      ctx.fillText('Herrajes · ' + state.herraje, W / 2, matY + 22);
-    }
-
-    /* módulos elegidos (puertas / cajones / alacena) */
-    var my = matY + (state.herraje ? 22 : 0) + 24;
-    GRUPOS.forEach(function (g) {
-      if (!groupActive(g)) return;
-      ctx.fillStyle = SOFT;
-      ctx.font = '400 11px "Jost", sans-serif';
-      ls(ctx, '0.5px');
-      ctx.fillText(MODELOS[g].label + ':  ' + modSummary(g), W / 2, my);
-      ls(ctx, '0px');
-      my += 17;
-    });
-
-    /* pie: cliente + fecha + contacto */
-    var nm = getVal('f-nombre');
-    var d = new Date();
-    var ds = d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
-    ctx.fillStyle = SOFT; ctx.font = '300 12px "Jost", sans-serif';
-    ctx.fillText((nm ? nm + '   ·   ' : '') + ds, W / 2, H - 72);
-    ctx.fillStyle = MUTE; ctx.font = '300 10px "Jost", sans-serif';
-    ls(ctx, '0.5px');
-    ctx.fillText('TECA  ·  Taller en Gonnet, La Plata  ·  +54 9 221 590 4082', W / 2, H - 50);
-    ls(ctx, '0px');
-
-    return canvas;
-  }
-
-  async function showPlan() {
-    var planWrap = document.getElementById('plan-wrap');
-    var planImg  = document.getElementById('plan-img');
-    var planHint = document.getElementById('plan-hint');
-    var saveBtn  = document.getElementById('save-img-btn');
-    try {
-      var canvas = await buildPlanCanvas();
-      var nm = (getVal('f-nombre') || 'proyecto').replace(/\s+/g, '-');
-      var filename = 'TECA-presupuesto-' + nm + '.png';
-
-      var blob = await new Promise(function (res) {
-        if (canvas.toBlob) canvas.toBlob(res, 'image/png');
-        else res(null);
-      });
-      var url = blob ? URL.createObjectURL(blob) : canvas.toDataURL('image/png');
-
-      /* Mostramos el plano para que se pueda guardar como foto (mantener presionado) */
-      planImg.src = url;
-      planWrap.classList.add('show');
-
-      /* ¿El dispositivo puede compartir archivos (celular)? */
-      var file = null, canShareFile = false;
-      try {
-        if (blob && navigator.canShare) {
-          file = new File([blob], filename, { type: 'image/png' });
-          canShareFile = navigator.canShare({ files: [file] });
-        }
-      } catch (e) { canShareFile = false; }
-
-      if (canShareFile) {
-        planHint.innerHTML = 'Mant&eacute;n presionada la imagen y eleg&iacute; <em>Guardar en fotos</em> — o tocá el botón para guardarla o compartirla.';
-        saveBtn.textContent = 'Guardar o compartir imagen';
-        saveBtn.onclick = function () {
-          navigator.share({ files: [file], title: 'Plano TECA', text: 'Plano de mi presupuesto · TECA' })
-            .catch(function () {});
-        };
-      } else {
-        /* Escritorio: descarga directa a la carpeta de descargas */
-        planHint.innerHTML = 'Tocá el botón para descargar la imagen del plano.';
-        saveBtn.textContent = 'Descargar imagen';
-        saveBtn.onclick = function () {
-          var a = document.createElement('a');
-          a.download = filename; a.href = url;
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        };
-        /* En escritorio la descargamos sola, como antes */
-        var a0 = document.createElement('a');
-        a0.download = filename; a0.href = url;
-        document.body.appendChild(a0); a0.click(); document.body.removeChild(a0);
-      }
-    } catch (e) {
-      console.warn('No se pudo generar la imagen del plano', e);
-      if (planWrap) planWrap.classList.remove('show');
-    }
-  }
-
-  function setMastheadMode(done) {
-    mastheadTitle.textContent = done ? 'Recibido.' : 'Pedinos presupuesto.';
-    Array.prototype.forEach.call(mastheadSubs, function (p) {
-      p.style.display = done ? 'none' : '';
-    });
-  }
-
-  form.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    var val = function (id) { return (document.getElementById(id).value || '').trim(); };
-
-    function tramoStr(t) {
-      return [
-        t.ancho ? 'ancho ' + t.ancho : '',
-        t.alto ? 'alto ' + t.alto : '',
-        t.prof ? 'prof ' + t.prof : ''
-      ].filter(Boolean).join(' · ');
-    }
-    var tramos = filledTramos();
-
-    var L = [];
-    L.push('*Nueva consulta · TECA*');
-    L.push('');
-    L.push('Nombre: ' + (val('f-nombre') || '—'));
-    L.push('Ubicación: ' + (val('f-ubicacion') || '—'));
-    L.push('Celular: ' + (val('f-celular') || '—'));
-    L.push('Correo: ' + (val('f-correo') || '—'));
-    L.push('');
-    L.push('Proyecto: ' + (state.piece || '—'));
-    if (state.piece === 'Cocina') {
-      /* Cocina: cada tramo con sus medidas y, debajo, sus módulos con medidas */
-      var crows = tramoRows().filter(function (r) {
-        var t = { ancho: clean(r.querySelector('.t-ancho').value), alto: clean(r.querySelector('.t-alto').value), prof: clean(r.querySelector('.t-prof').value) };
-        return (r._seq && r._seq.length) || t.ancho || t.alto || t.prof;
-      });
-      var cmulti = crows.length > 1;
-      L.push(cmulti ? 'Medidas y módulos (cm):' : 'Medidas (cm):');
-      if (!crows.length) L.push('  —');
-      var GORDER = ['puertas', 'cajones', 'hueco', 'alacena'];
-      crows.forEach(function (r, i) {
-        var t = { ancho: clean(r.querySelector('.t-ancho').value), alto: clean(r.querySelector('.t-alto').value), prof: clean(r.querySelector('.t-prof').value) };
-        var seq = r._seq || [];
-        if (cmulti) {
-          L.push('  Tramo ' + (i + 1) + ' (' + (tramoStr(t) || 'sin medidas') + '):');
-        } else {
-          L.push('  ' + (tramoStr(t) || 'sin medidas'));
-        }
-        var any = false;
-        GORDER.forEach(function (g) {
-          var s = rowModSummary(seq, g);
-          if (s) { L.push('    ' + MODELOS[g].label + ': ' + s); any = true; }
-        });
-        if (!any) L.push('    (sin módulos)');
-      });
-      L.push('Material: ' + (state.material || '—'));
-      L.push('Terminación: ' + (toneLabel() || '—'));
-    } else {
-      if (tramos.length <= 1) {
-        L.push('Medidas (cm): ' + (tramos.length ? tramoStr(tramos[0]) : '—'));
-      } else {
-        L.push('Medidas (cm):');
-        tramos.forEach(function (t, i) {
-          L.push('  Tramo ' + (i + 1) + ': ' + (tramoStr(t) || '—'));
-        });
-      }
-      L.push('Material: ' + (state.material || '—'));
-      L.push('Terminación: ' + (toneLabel() || '—'));
-      if (usaAberturas(state.piece)) {
-        L.push('Puertas: ' + modSummary('puertas'));
-        L.push('Cajones: ' + modSummary('cajones'));
-      }
-    }
-    if (showsHerrajes(state.piece) !== 'never') {
-      L.push('Herrajes: ' + (state.herraje || '—'));
-    }
-    L.push('');
-    L.push('Observaciones: ' + (val('f-mensaje') || '—'));
-    var texto = L.join('\n');
-    var waUrl = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent(texto);
-
-    /* Mostramos el agradecimiento (con el nombre). Esta pantalla queda siempre
-       visible; WhatsApp se abre cuando la persona toca el botón. */
-    var nombre = val('f-nombre');
-    var first  = nombre ? nombre.split(' ')[0] : '';
-    thanksTitle.innerHTML = 'Gracias' + (first ? ' ' + first : '') + ', te escribimos pronto.';
-    document.getElementById('wa-btn').href = waUrl;
-    setMastheadMode(true);
-    layout.classList.add('hide');
-    thanks.classList.add('show');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    /* Generamos el plano y lo mostramos para guardar como foto / compartir */
-    showPlan();
-  });
-
-  document.getElementById('reset-btn').addEventListener('click', function () {
-    form.reset();
-    state = { piece: null, material: null, herraje: null, tone: null, img: null, otherText: '',
-              seq: [], yn: { puertas: { on: false, n: 1 }, cajones: { on: false, n: 1 } } };
-    Array.prototype.forEach.call(document.querySelectorAll('.is-selected'), function (el) {
-      el.classList.remove('is-selected');
-    });
-    resetAberturas();
-    resetTramos();
-    config.hidden = true;
-    setTerminaciones(null);
-    setMastheadMode(false);
-    var planWrap = document.getElementById('plan-wrap');
-    if (planWrap) planWrap.classList.remove('show');
-    thanks.classList.remove('show');
-    layout.classList.remove('hide');
-  });
-
-  /* ---- En celular, el panel del plano sube y queda debajo de
-     "¿Qué proyecto tenés en mente?"; en desktop vuelve a la columna derecha. ---- */
-  (function () {
-    var encargoEl  = document.querySelector('.encargo');
-    var pieceBlock = pieceGrid.closest('.block');
-    var mq = window.matchMedia('(max-width: 920px)');
-    function place() {
-      if (mq.matches) {
-        if (pieceBlock.nextElementSibling !== encargoEl) {
-          pieceBlock.insertAdjacentElement('afterend', encargoEl);
-        }
-      } else if (layout.lastElementChild !== encargoEl) {
-        layout.appendChild(encargoEl);
-      }
-    }
-    if (mq.addEventListener) mq.addEventListener('change', place);
-    else if (mq.addListener) mq.addListener(place);
-    place();
-  })();
-
-  setTerminaciones(null);
-})();
+setTodayDate();
+addModule();
 </script>
 </body>
 </html>
